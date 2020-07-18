@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>400</height>
+    <width>1500</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,15 @@
      <rect>
       <x>340</x>
       <y>0</y>
+      <width>1280</width>
+      <height>720</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
       <width>640</width>
       <height>360</height>
-     </rect>
+     </size>
     </property>
     <property name="text">
      <string/>
@@ -33,7 +39,7 @@
       <x>0</x>
       <y>0</y>
       <width>340</width>
-      <height>360</height>
+      <height>740</height>
      </rect>
     </property>
     <property name="title">
@@ -45,40 +51,52 @@
        <x>5</x>
        <y>5</y>
        <width>330</width>
-       <height>100</height>
+       <height>70</height>
       </rect>
      </property>
      <property name="title">
       <string/>
      </property>
-     <widget class="QComboBox" name="cbCameraLocation">
+     <widget class="QWidget" name="">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>30</y>
-        <width>111</width>
-        <height>22</height>
+        <x>10</x>
+        <y>10</y>
+        <width>311</width>
+        <height>51</height>
        </rect>
       </property>
-     </widget>
-     <widget class="QComboBox" name="cbName">
-      <property name="geometry">
-       <rect>
-        <x>170</x>
-        <y>30</y>
-        <width>131</width>
-        <height>22</height>
-       </rect>
-      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QComboBox" name="cbCameraLocation"/>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="cbName"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="pushButton">
+         <property name="text">
+          <string>View violation chart</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QRadioButton" name="rbViewInterestElements">
+         <property name="text">
+          <string>View interest elements</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
     <widget class="QGroupBox" name="gbCameraViolations">
      <property name="geometry">
       <rect>
        <x>5</x>
-       <y>110</y>
+       <y>80</y>
        <width>330</width>
-       <height>245</height>
+       <height>630</height>
       </rect>
      </property>
      <property name="title">
@@ -92,7 +110,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1000</width>
+     <width>1500</width>
      <height>21</height>
     </rect>
    </property>
@@ -101,12 +119,24 @@
      <string>Camera</string>
     </property>
     <addaction name="actionAdd_camera"/>
+    <addaction name="actionHelp"/>
+    <addaction name="actionExport_violations"/>
    </widget>
    <addaction name="menuCamera"/>
   </widget>
   <action name="actionAdd_camera">
    <property name="text">
     <string>Add camera</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+  </action>
+  <action name="actionExport_violations">
+   <property name="text">
+    <string>Export violations</string>
    </property>
   </action>
  </widget>

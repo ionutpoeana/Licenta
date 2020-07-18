@@ -1,5 +1,5 @@
 /************************************************************************************************
-** File created by QxEntityEditor 1.2.5 (2020/07/07 22:14) : please, do NOT modify this file ! **
+** File created by QxEntityEditor 1.2.5 (2020/07/15 00:46) : please, do NOT modify this file ! **
 ************************************************************************************************/
 
 #ifndef _LICENTA_VIOLATION_H_
@@ -18,7 +18,7 @@ public:
 
 protected:
 
-   long m_ViolationId;
+   QUuid m_ViolationId;
    QDateTime m_Time;
    QString m_VideoLocation;
    QString m_PhotoLocation;
@@ -28,17 +28,17 @@ protected:
 public:
 
    Violation();
-   Violation(const long & id);
+   Violation(const QUuid & id);
    virtual ~Violation();
 
-   long getViolationId() const;
+   QUuid getViolationId() const;
    QDateTime getTime() const;
    QString getVideoLocation() const;
    QString getPhotoLocation() const;
    int getRuleType() const;
    type_Camera getCamera() const;
 
-   void setViolationId(const long & val);
+   void setViolationId(const QUuid & val);
    void setTime(const QDateTime & val);
    void setVideoLocation(const QString & val);
    void setPhotoLocation(const QString & val);
@@ -66,9 +66,10 @@ public:
 };
 
 typedef std::shared_ptr<Violation> Violation_ptr;
-typedef qx::QxCollection<long, Violation_ptr> list_of_Violation;
+typedef qx::QxCollection<QUuid, Violation_ptr> list_of_Violation;
 typedef std::shared_ptr<list_of_Violation> list_of_Violation_ptr;
 
+QX_REGISTER_PRIMARY_KEY(Violation, QUuid)
 QX_REGISTER_COMPLEX_CLASS_NAME_HPP_LICENTA(Violation, qx::trait::no_base_class_defined, 0, Violation)
 
 #include "../include/Camera.gen.h"

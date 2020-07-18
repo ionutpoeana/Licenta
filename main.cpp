@@ -1,9 +1,10 @@
 #include "mainwindow.h"
 
+
 #include <QApplication>
 
 #include <QtSql>
-
+#include <QUuid>
 
 int main(int argc, char *argv[])
 {

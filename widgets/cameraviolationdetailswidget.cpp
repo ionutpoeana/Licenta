@@ -12,6 +12,8 @@ CameraViolationDetailsWidget::CameraViolationDetailsWidget(QWidget *parent) : QW
     m_scrollAreaWidget = new QWidget;
 
     m_lblViolationsNumber = new QLabel;
+    m_lblViolationsNumber->setTextFormat(Qt::TextFormat::PlainText);
+    m_lblViolationsNumber->setStyleSheet("QLabel{font-weight: light; font-size:1.2em;}");
 
     fLayout = new QFormLayout;
     vLayout_widget = new QVBoxLayout;
@@ -35,18 +37,18 @@ CameraViolationDetailsWidget::CameraViolationDetailsWidget(QWidget *parent) : QW
     vLayout_widget->addWidget(m_scrollArea);
 
     gbDetails->setLayout(vLayout_widget);
-    gbDetails->setFixedSize(340,300);
+    gbDetails->setMinimumWidth(340);
+    gbDetails->setMinimumHeight(600);
     gbDetails->show();
 }
 
 CameraViolationDetailsWidget::~CameraViolationDetailsWidget()
 {
-
-    delete m_vViolationsLayout;
-    delete m_scrollArea;
-    delete m_scrollAreaWidget;
+    if(m_vViolationsLayout!=nullptr)
+        delete m_vViolationsLayout;
+    if(m_scrollArea!=nullptr)
+        delete m_scrollArea;
     delete m_lblViolationsNumber;
-
 }
 
 void CameraViolationDetailsWidget::addViolationItems(const QList<Violation> violations)
@@ -60,11 +62,18 @@ void CameraViolationDetailsWidget::addViolationItems(const QList<Violation> viol
     }
     m_lblViolationsNumber->setText(QString::number(m_violations->size()));
 
+
 }
 
 void CameraViolationDetailsWidget::addViolationItem(const Violation violation)
 {
+
     ViolationWidget* vWidget = new ViolationWidget(violation);
+    if(!m_violations->isEmpty())
+    {
+        m_violations->clear();
+    }
+
     m_violations->push_back(vWidget);
     m_vViolationsLayout->addWidget(vWidget);
     m_lblViolationsNumber->setText(QString::number(m_violations->size()));

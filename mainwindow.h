@@ -3,11 +3,13 @@
 
 #include "ocv/utils.h"
 #include "ocv/semaphore.h"
-#include "ocv/proof.h"
+#include "ocv/violationproof.h"
 
 #include "savevideothread.h"
 #include "widgets/cameraviolationdetailswidget.h"
 #include "widgets/addcamerawidget.h"
+
+#include "databasefactory.h"
 
 #include <QMainWindow>
 #include <QVideoFrame>
@@ -40,32 +42,35 @@ public:
 
 private slots:
 
-    void receiveCameraStream(CameraStream *cameraStream);
-    void readFrame();
-    void receiveViolation(const Violation& v);
+    void receiveCameraStreamSlot(CameraStream *cameraStream);
+    void receiveViolationSlot(Violation*violation);
+    void receiveFrameSlot(QImage* image);
+    void receiveStreamErrorSlot(QUuid streamId, QString error);
+    void receiveFinishedStreamSlot(QUuid streamId);
 
     void on_actionAddCamera();
-
+    void on_cbNameIndexChanged(int index);
+    void on_cbCameraLocationIndexChanged(int index);
+signals:
+    void displayStreamSignal(QUuid steamId);
 private:
+    int m_cbNameLastIndex = 0;
 
     Ui::MainWindow *ui;
 
-    const QString carCountingUnderBridge = "C:\\Users\\ionut\\Desktop\\Licenta\\video\\CarsDrivingUnderBridge.mp4";
-
     CameraViolationDetailsWidget* m_violationsDetails;
-    AddCameraWidget* m_addCameraWidget = nullptr;
+    AddCameraWidget* m_addCameraWidget;
 
-    QTimer* m_displayVideoTimer;
-    bool m_hasCrimeBeenCommitted;
     SaveVideoThread* m_saveVideoThread;
     QSqlDatabase m_database;
+    CameraStream* m_cameraStream = nullptr;
 
-    CameraStream* m_cameraStream;
-    cv::VideoCapture capture;
-    cv::Mat frameMat;
-    cv::Mat previousFrameMat;
-    queue<Mat> proofOfCrime;
-    int violationNumber;
+    QList<Camera> m_cameraList;
+    QList<Violation> m_violationsList;
+    QMutex m_mutex;
 
+    void loadCameraLocations();
+    void loadCameraNames(const QString& location);
+    void loadCameraViolations(const QUuid& cameraId);
 };
 #endif // MAINWINDOW_H

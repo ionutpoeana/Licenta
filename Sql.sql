@@ -10,7 +10,10 @@ exec sp_columns t_violation
 
 drop table t_camera
 
-select * from t_camera;
+select * from licenta.dbo.t_violation;
+select * from licenta.dbo.t_camera;
 
+delete licenta.dbo.t_violation;
+delete licenta.dbo.t_camera;
 
 drop table t_violation

@@ -6,10 +6,6 @@
 #include <string>
 
 
-
-
-
-
 template<typename QEnum>
 QString QtEnumToString (const QEnum value)
 {

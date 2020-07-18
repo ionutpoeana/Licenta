@@ -10,8 +10,6 @@ class Rule
 public:
     Rule();
 
-    RULE_TYPE m_ruleType;
-
     virtual ~Rule();
 
     virtual void setup( cv::VideoCapture capture) = 0;
@@ -20,6 +18,8 @@ public:
 
     virtual void drawInfOnFrame(cv::Mat &frame)=0;
     virtual void drawComponentsInfOnFrame(cv::Mat &frame) = 0;
+
+    virtual RULE_TYPE getRuleType()=0;
 
     virtual cv::Mat getAreaMask(){return cv::Mat();};
     virtual cv::Mat getMotionMatrix(){return cv::Mat();};

@@ -16,14 +16,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    databasefactory.cpp \
     main.cpp \
     mainwindow.cpp \
     ocv/camerastream.cpp \
     ocv/component.cpp \
-    ocv/proof.cpp \
     ocv/rule.cpp \
     ocv/semaphore.cpp \
     ocv/utils.cpp\
+    ocv/violationproof.cpp \
     processvideothread.cpp \
     savevideothread.cpp \
     widgets/addcamerawidget.cpp \
@@ -33,14 +34,15 @@ SOURCES += \
 
 
 HEADERS += \
+    databasefactory.h \
     mainwindow.h \
     ocv/camerastream.h \
     ocv/component.h \
     ocv/constants.h \
-    ocv/proof.h \
     ocv/rule.h \
     ocv/semaphore.h \
-    ocv/ utils.h\
+    ocv/utils.h\
+    ocv/violationproof.h \
     processvideothread.h \
     savevideothread.h \
     widgets/addcamerawidget.h \

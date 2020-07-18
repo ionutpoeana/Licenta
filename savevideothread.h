@@ -1,7 +1,7 @@
 #ifndef SAVEVIDEOTHREAD_H
 #define SAVEVIDEOTHREAD_H
 
-#include "ocv/proof.h"
+#include "ocv/violationproof.h"
 
 #include "widgets/violationwidget.h"
 
@@ -21,28 +21,29 @@
 class SaveVideoThread : public QThread
 {
 
-
-    Q_OBJECT
-public:
-    SaveVideoThread(QSqlDatabase _dataBase, QObject *parent = nullptr);
-    ~SaveVideoThread();
-    void saveVideo(ViolationProof* violationProof);
-
-signals:
-    void videoSaved(const Violation&v);
-
-
-protected:
-    void run() override;
-
 private:
     QMutex m_mutex;
     QWaitCondition m_waitCondition;
     std::queue<ViolationProof*> m_videoQueue;
-
     QSqlDatabase m_dataBase;
 
     bool m_abort;
+
+    Q_OBJECT
+
+protected:
+    void run() override;
+
+public:
+    SaveVideoThread(QSqlDatabase _dataBase, QObject *parent = nullptr);
+    ~SaveVideoThread();
+
+public   slots:
+    void saveViolationSlot(ViolationProof* violationProof);
+
+signals:
+    void violationSavedSignal(Violation* violation);
+
 };
 
 #endif // SAVEVIDEOTHREAD_H

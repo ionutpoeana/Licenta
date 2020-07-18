@@ -1,5 +1,5 @@
 #################################################################################################
-## File created by QxEntityEditor 1.2.5 (2020/07/07 22:14) : please, do NOT modify this file ! ##
+## File created by QxEntityEditor 1.2.5 (2020/07/13 22:52) : please, do NOT modify this file ! ##
 #################################################################################################
 
 !contains(DEFINES, _QX_NO_PRECOMPILED_HEADER) {

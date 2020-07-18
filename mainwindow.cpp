@@ -18,33 +18,57 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    m_displayVideoTimer = new QTimer(this);
 
-    m_database = QSqlDatabase::addDatabase("QODBC");
-
-    m_database.setDatabaseName(connectionString);
-
+    m_database = DatabaseFactory::getConnection();
     m_saveVideoThread = new SaveVideoThread(m_database,nullptr);
-
-    m_hasCrimeBeenCommitted = false;
-    violationNumber = 0;
     TIME = 0;
 
     m_violationsDetails = new CameraViolationDetailsWidget(ui->gbCameraViolations);
 
-    connect(m_displayVideoTimer,SIGNAL(timeout()),this,SLOT(readFrame()));
-    connect(m_saveVideoThread,&SaveVideoThread::videoSaved,this,&MainWindow::receiveViolation);
-    connect(ui->actionAdd_camera, &QAction::triggered,this,&MainWindow::on_actionAddCamera);
 
+    bool isSignalSlotConnected = connect(m_saveVideoThread,&SaveVideoThread::violationSavedSignal,this,&MainWindow::receiveViolationSlot);
+    if(isSignalSlotConnected)
+    {
+        qDebug()<<m_saveVideoThread->metaObject()->className()<<" violationSavedSignal connection with " <<this->metaObject()->className() << " SUCCEDED!" ;
+    }
+    else
+    {
+        qDebug()<<this->metaObject()->className()<<" sendCurrentFrameSignal connection with " <<m_cameraStream->metaObject()->className() << " FAILED!" ;
+    }
+
+    connect(ui->actionAdd_camera, &QAction::triggered,this,&MainWindow::on_actionAddCamera);
+    m_addCameraWidget = nullptr;
+
+
+    m_mutex.lock();
+    qx::dao::fetch_all(m_cameraList,&m_database);
+    m_mutex.unlock();
+
+    loadCameraLocations();
+
+    connect(ui->cbCameraLocation, SIGNAL(activated(int)),this, SLOT(on_cbCameraLocationIndexChanged(int)));
+    connect(ui->cbName, SIGNAL(activated(int)),this,SLOT(on_cbNameIndexChanged(int)));
 }
 
 MainWindow::~MainWindow()
 {
-    delete m_displayVideoTimer;
+    if(m_addCameraWidget!=nullptr)
+        delete m_addCameraWidget;
+
+    if(m_cameraStream!=nullptr)
+        delete m_cameraStream;
+
+    if(m_saveVideoThread!=nullptr)
+        delete m_saveVideoThread;
+
+    if(m_violationsDetails!=nullptr)
+        delete m_violationsDetails;
+
     delete ui;
+    ui= nullptr;
 }
 
-void MainWindow::receiveCameraStream(CameraStream *cameraStream)
+void MainWindow::receiveCameraStreamSlot(CameraStream *cameraStream)
 {
     if(m_addCameraWidget!=nullptr)
     {
@@ -52,112 +76,86 @@ void MainWindow::receiveCameraStream(CameraStream *cameraStream)
         m_addCameraWidget = nullptr;
     }
 
+    if(m_cameraStream!=nullptr)
+    {
+        delete m_cameraStream;
+    }
+
     m_cameraStream = cameraStream;
-    ui->cbCameraLocation->addItem(QString::fromUtf8(m_cameraStream->m_cameraLocation.c_str()));
-    ui->cbName->addItem(QString::fromUtf8(m_cameraStream->m_cameraName.c_str()));
+    Camera camera;
+    camera.setName(cameraStream->m_camera.data()->getName());
+    camera.setCameraId(cameraStream->m_camera.data()->getCameraId());
+    camera.setLocation(cameraStream->m_camera.data()->getLocation());
+    camera.setStreamLocation(cameraStream->m_camera.data()->getStreamLocation());
+    m_cameraList.push_back(camera);
 
-    if(m_displayVideoTimer->isActive())
+    loadCameraNames(m_cameraStream->m_camera->getLocation());
+    loadCameraViolations(m_cameraStream->m_camera->getCameraId());
+    ui->cbName->setCurrentText(m_cameraStream->m_camera->getName());
+
+    if(ui->cbCameraLocation->findText(camera.getLocation())==-1)
     {
-        m_displayVideoTimer->stop();
+        ui->cbCameraLocation->addItem(camera.getLocation());
+    }
+    ui->cbCameraLocation->setCurrentText(camera.getLocation());
+
+
+    bool isSignalSlotConnected = connect(m_cameraStream, &CameraStream::violationDetectedSignal, m_saveVideoThread, &SaveVideoThread::saveViolationSlot);
+    if(isSignalSlotConnected)
+    {
+        qDebug()<<m_cameraStream->metaObject()->className()<<" violationDetectedSignal connection with " <<m_saveVideoThread->metaObject()->className() << " SUCCEDED!" ;
+    }
+    else
+    {
+        qDebug()<<this->metaObject()->className()<<" violationDetectedSignal connection with " <<m_saveVideoThread->metaObject()->className() << " FAILED!" ;
     }
 
-    if(capture.isOpened())
+    connect(this,&MainWindow::displayStreamSignal, m_cameraStream, &CameraStream::displayStreamSlot);
+    emit displayStreamSignal(m_cameraStream->m_camera->getCameraId());
+    isSignalSlotConnected =   connect(m_cameraStream,&CameraStream::sendCurrentFrameSignal, this, &MainWindow::receiveFrameSlot);
+    if(isSignalSlotConnected)
     {
-        capture.~VideoCapture();
+        qDebug()<<this->metaObject()->className()<<" sendCurrentFrameSignal connection with " <<m_cameraStream->metaObject()->className() << " SUCCEDED!" ;
+    }
+    else
+    {
+        qDebug()<<this->metaObject()->className()<<" sendCurrentFrameSignal connection with " <<m_cameraStream->metaObject()->className() << " FAILED!" ;
     }
 
-    capture.open(m_cameraStream->m_videoLocation);
-    if(!capture.isOpened())
-    {
-        qDebug()<<"Error at opening file "<<QString::fromUtf8(m_cameraStream->m_videoLocation.c_str());
-        exit(EXIT_FAILURE);
-    }
-
-    // for 3 frame diffencing
-    for (int i = 0; i <= BUFFER_SIZE; ++i)
-    {
-        capture.read(frameMat);
-    }
-
-    previousFrameMat = frameMat.clone();
-
-
-    m_displayVideoTimer->start(NORMAL_FRAME_TIME);
+    m_cameraStream->startStreamProcessing();
 }
 
-void MainWindow::readFrame()
+void MainWindow::receiveViolationSlot(Violation *violation)
 {
-    if(capture.isOpened())
+    for(const auto&camera : m_cameraList)
     {
-        cv::Mat frameMat;
-        QImage* qImage;
-
-        if(!capture.read(frameMat))
-            return;
-
-        for(const auto&m_rule : m_cameraStream->m_trafficRules)
+        if(camera.getName() == ui->cbName->currentText()
+                && camera.getLocation() == ui->cbCameraLocation->currentText()
+                && violation->getCamera()->getCameraId() == camera.getCameraId())
         {
-
-            m_rule->drawComponentsInfOnFrame(previousFrameMat);
-
-            namedWindow("mask",WINDOW_NORMAL);
-            imshow("mask",m_rule->getAreaMask());
-
-            namedWindow("motionMat",WINDOW_NORMAL);
-            imshow("motionMat",m_rule->getMotionMatrix());
-
-            proofOfCrime.push(previousFrameMat.clone());
-
-            m_rule->update(frameMat.clone());
-
-
-            m_hasCrimeBeenCommitted = m_rule->checkRuleViolation();
-            if(proofOfCrime.empty())
-                m_hasCrimeBeenCommitted = false;
-
-
-            if(m_hasCrimeBeenCommitted)
-            {
-                ViolationProof *violationProof = new ViolationProof(string("TrecerePeRosu") + to_string(violationNumber) + string(".avi"),1);
-
-                while(!proofOfCrime.empty())
-                {
-                    violationProof->m_violationVideo.push(proofOfCrime.front());
-                    proofOfCrime.pop();
-                }
-
-                m_saveVideoThread->saveVideo(violationProof);
-                ++violationNumber;
-            }
-            else if(proofOfCrime.size()>30)
-            {
-                proofOfCrime.pop();
-            }
-
-            previousFrameMat = frameMat.clone();
-            m_rule->drawInfOnFrame(frameMat);
-            m_rule->drawComponentsInfOnFrame(frameMat);
-
-
-            cv::Mat frameMatCopy;
-            cv::resize(frameMat,frameMatCopy,cv::Size(640,360),0,0,cv::INTER_NEAREST);
-            cv::cvtColor(frameMatCopy,frameMatCopy,cv::COLOR_BGR2RGB);
-
-            qImage = new QImage(frameMatCopy.data,frameMatCopy.cols, frameMatCopy.rows, QImage::Format::Format_RGB888);
-            ui->lblVideo->setPixmap(QPixmap::fromImage(*qImage));
+            m_violationsDetails->addViolationItem(*violation);
+            break;
         }
-        TIME+=NORMAL_FRAME_TIME;
     }
 }
 
-// TODO: adaugat codul perfectionat din visual studio
-// de scris partea a 2-a a licentei
-
-
-void MainWindow::receiveViolation(const Violation&v)
+void MainWindow::receiveFrameSlot(QImage *image)
 {
-    m_violationsDetails->addViolationItem(v);
+    QImage scaldedImgge = image->scaled(ui->lblVideo->size(),Qt::KeepAspectRatio);
+    ui->lblVideo->setPixmap(QPixmap::fromImage(*image));
+    TIME+=NORMAL_FRAME_TIME;
 }
+
+void MainWindow::receiveStreamErrorSlot(QUuid streamId, QString error)
+{
+
+}
+
+void MainWindow::receiveFinishedStreamSlot(QUuid streamId)
+{
+
+}
+
 
 void MainWindow::on_actionAddCamera()
 {
@@ -165,7 +163,93 @@ void MainWindow::on_actionAddCamera()
     {
         delete m_addCameraWidget;
     }
-    m_addCameraWidget = new AddCameraWidget();
-    connect(m_addCameraWidget,&AddCameraWidget::cameraSaved, this, &MainWindow::receiveCameraStream);
-    qDebug()<<"A mers sa adaug o actiune";
+    m_addCameraWidget = new AddCameraWidget(&m_database);
+
+    bool isSignalSlotConnected = connect(m_addCameraWidget,&AddCameraWidget::cameraSavedSignal, this, &MainWindow::receiveCameraStreamSlot);
+    if(isSignalSlotConnected)
+    {
+        qDebug()<<this->metaObject()->className()<<" connection with " <<m_addCameraWidget->metaObject()->className() << " SUCCEDED!" ;
+    }
+    else
+    {
+        qDebug()<<this->metaObject()->className()<<" connection with " <<m_addCameraWidget->metaObject()->className() << " FAILED!" ;
+    }
+}
+
+void MainWindow::on_cbNameIndexChanged(int index)
+{
+
+    if(m_cbNameLastIndex !=index)
+    {
+        for(const auto&camera : m_cameraList)
+        {
+            if(ui->cbName->itemText(index).remove(' ') == camera.getName().remove(' '))
+            {
+                loadCameraViolations(camera.getCameraId());
+            }
+        }
+        m_cbNameLastIndex = index;
+    }
+}
+
+void MainWindow::on_cbCameraLocationIndexChanged(int index)
+{
+    loadCameraNames(ui->cbCameraLocation->itemText(index).remove(' '));
+}
+
+void MainWindow::loadCameraViolations(const QUuid& cameraId)
+{
+
+    m_violationsList.clear();
+    delete m_violationsDetails;
+    m_violationsDetails = new CameraViolationDetailsWidget(ui->gbCameraViolations);
+
+    qx_query query;
+    query.where("t_violation.camera").isEqualTo(cameraId.toString());
+    qx::dao::fetch_by_query(query,m_violationsList,&m_database);
+    m_violationsDetails->addViolationItems(m_violationsList);
+}
+
+void MainWindow::loadCameraLocations()
+{
+    if(m_cameraList.isEmpty())
+    {
+        qDebug()<<this->metaObject()->className() <<"\tNo cameras in database!";
+        return;
+    }
+
+    Camera * currentCamera = nullptr;
+    for(auto&camera: m_cameraList)
+    {
+        if(ui->cbCameraLocation->findText(camera.getLocation())==-1)
+        {
+            ui->cbCameraLocation->addItem(camera.getLocation());
+        }
+
+        if(ui->cbCameraLocation->currentText() == camera.getLocation())
+        {
+            currentCamera = &camera;
+        }
+
+    }
+
+    loadCameraNames(currentCamera->getLocation());
+    loadCameraViolations(currentCamera->getCameraId());
+}
+
+void MainWindow::loadCameraNames(const QString &location)
+{
+
+    if(ui->cbName->count()!=0)
+    {
+        ui->cbName->clear();
+    }
+
+    for(const auto&camera : m_cameraList)
+    {
+        if(camera.getLocation().remove(' ')==QString(location).remove(' '))
+        {
+            ui->cbName->addItem(camera.getName());
+        }
+    }
 }

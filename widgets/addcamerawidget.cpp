@@ -10,8 +10,10 @@
 // videoLocation
 // un vector de rules
 
-AddCameraWidget::AddCameraWidget(QWidget *parent) : QWidget(parent)
+AddCameraWidget::AddCameraWidget( QSqlDatabase* database, QWidget *parent) : QWidget(parent)
 {
+    m_dataBase = database;
+
     m_pBtnOpenLocalVideo = new QPushButton;
     m_pBtnOpenLocalVideo->setObjectName("pBtnOpenLocalVideo");
     m_pBtnOpenLocalVideo->setText("Local video");
@@ -64,7 +66,8 @@ AddCameraWidget::AddCameraWidget(QWidget *parent) : QWidget(parent)
     connect(m_pBtnSetUpRule,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSetUpRule_clicked);
     connect(m_pBtnSave,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSave_clicked);
 
-    m_cameraStream = nullptr;
+    m_cameraStream = new CameraStream("F:\\violations");
+    m_camera = new Camera;
 }
 
 AddCameraWidget::~AddCameraWidget()
@@ -85,25 +88,20 @@ AddCameraWidget::~AddCameraWidget()
 
 void AddCameraWidget::m_pBtnOpenLocalVideo_clicked()
 {
-    if(m_cameraStream != nullptr)
-        delete m_cameraStream;
-
-    m_cameraStream =  new CameraStream;
-
     QString videoLocation = QFileDialog::getOpenFileName(this,"Open video",QDir::currentPath(),QStringLiteral("Video (*.mp4)"));
     if(videoLocation.size()!=0)
     {
-        m_cameraStream->m_videoLocation = videoLocation.toStdString();
+        m_camera->setStreamLocation(videoLocation);
     }
 
 }
 
 void AddCameraWidget::m_pBtnSave_clicked()
 {
-    if(m_cameraStream->m_videoLocation.empty())
+    if(m_camera->getStreamLocation().isEmpty())
     {
         QMessageBox msgBox;
-        msgBox.setText("Please choose a video!");
+        msgBox.setText("Please choose a stream!");
         msgBox.exec();
         return;
     }
@@ -115,16 +113,31 @@ void AddCameraWidget::m_pBtnSave_clicked()
         msgBox.exec();
         return;
     }
-    m_cameraStream->m_cameraLocation = m_leCameraLocation->text().toStdString();
 
-    if(  m_leCameraName->text().isEmpty())
+    if(m_leCameraName->text().isEmpty())
     {
         QMessageBox msgBox;
         msgBox.setText("Please provide a camera name!");
         msgBox.exec();
         return;
     }
-    m_cameraStream->m_cameraName = m_leCameraName->text().toStdString();
+
+    qx_query cameraQuery;
+    cameraQuery.where("t_camera.name").isEqualTo(m_leCameraName->text())
+            .and_("t_camera.location").isEqualTo(m_leCameraLocation->text());
+
+    m_mutex.lock();
+    long cameraCount = qx::dao::count<Camera>(cameraQuery,m_dataBase);
+    m_mutex.unlock();
+
+    if(cameraCount>0)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("There already exists a camera with this name and location!");
+        msgBox.exec();
+        return;
+    }
+
 
     if(m_cameraStream->m_trafficRules.empty())
     {
@@ -134,17 +147,36 @@ void AddCameraWidget::m_pBtnSave_clicked()
         return;
     }
 
-     emit cameraSaved(m_cameraStream);
-     qDebug()<<"qDebug(): The camera has been set succesfully!";
+    m_camera->setCameraId(QUuid::createUuid());
+    m_camera->setLocation(m_leCameraLocation->text());
+    m_camera->setName(m_leCameraName->text());
+
+    m_mutex.lock();
+    QSqlError error =  qx::dao::insert(m_camera,m_dataBase);
+    m_mutex.unlock();
+    if(error.type()!=QSqlError::NoError)
+    {
+        qDebug()<<this->metaObject()->className()<<"\tThe stream save has FAILED! "<<m_camera->getStreamLocation();
+
+    }
+    else
+    {
+        qDebug()<<this->metaObject()->className()<<"\tThe stream save has SUCCEDED! "<<m_camera->getStreamLocation();
+        m_dataBase->commit();
+        QSharedPointer<Camera> sharedCamera = QSharedPointer<Camera>(m_camera);
+        m_cameraStream->m_camera = sharedCamera;
+        emit cameraSavedSignal(m_cameraStream);
+    }
 }
 
 void AddCameraWidget::m_pBtnSetUpRule_clicked()
 {
-    if(m_cameraStream->m_videoLocation.empty())
+    if(m_camera->getStreamLocation().isEmpty())
     {
         QMessageBox msgBox;
         msgBox.setText("Please choose a video!");
         msgBox.exec();
+        return;
     }
 
     RULE_TYPE ruleSelection =(RULE_TYPE) m_cbRuleType->currentIndex();
@@ -155,23 +187,21 @@ void AddCameraWidget::m_pBtnSetUpRule_clicked()
         rule = new Semaphore();
         break;
     case RULE_TYPE::FORBIDDEN_FORWARD:
-        break;
     case RULE_TYPE::FORBIDDEN_ON_THE_LEFT:
-        break;
     case RULE_TYPE::FORBIDDEN_ON_THE_RIGHT:
-        break;
     case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_LEFT:
-        break;
     case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_RIGHT:
+        QMessageBox msgBox;
+        msgBox.setText("Rule not implemented!");
+        msgBox.exec();
         break;
     }
 
     if(rule!=nullptr)
     {
-        VideoCapture capture(m_cameraStream->m_videoLocation);
+        VideoCapture capture(m_camera->getStreamLocation().toStdString());
         rule->setup(capture);
         m_cameraStream->m_trafficRules.push_back(rule);
     }
-
-    qDebug()<<"qDebug(): The rule has been set succesfully!";
+    qDebug()<<this->metaObject()->className()<<"\tThe rule has been set succesfully!"<<QString::fromStdString(enumToString(rule->getRuleType()));
 }

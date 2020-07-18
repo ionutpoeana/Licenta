@@ -1,5 +1,5 @@
 /************************************************************************************************
-** File created by QxEntityEditor 1.2.5 (2020/07/07 22:14) : please, do NOT modify this file ! **
+** File created by QxEntityEditor 1.2.5 (2020/07/15 00:46) : please, do NOT modify this file ! **
 ************************************************************************************************/
 
 #include "../include/Licenta_precompiled_header.gen.h"
@@ -30,6 +30,7 @@ void register_class(QxClass<Camera> & t)
    pData->setName("name");
    pData = t.data(& Camera::m_Location, "Location", 0, true, true);
    pData->setName("location");
+   pData = t.data(& Camera::m_StreamLocation, "StreamLocation", 0, true, true);
 
    pRelation = t.relationOneToMany(& Camera::m_ListOfViolation, "ListOfViolation", "Camera", 0);
    pRelation->getDataMember()->setName("list_of_violation");
@@ -39,17 +40,19 @@ void register_class(QxClass<Camera> & t)
 
 } // namespace qx
 
-Camera::Camera() : m_CameraId(0) { ; }
+Camera::Camera() { ; }
 
-Camera::Camera(const long & id) : m_CameraId(id) { ; }
+Camera::Camera(const QUuid & id) : m_CameraId(id) { ; }
 
 Camera::~Camera() { ; }
 
-long Camera::getCameraId() const { return m_CameraId; }
+QUuid Camera::getCameraId() const { return m_CameraId; }
 
 QString Camera::getName() const { return m_Name; }
 
 QString Camera::getLocation() const { return m_Location; }
+
+QString Camera::getStreamLocation() const { return m_StreamLocation; }
 
 Camera::type_ListOfViolation Camera::getListOfViolation() const { return m_ListOfViolation; }
 
@@ -57,11 +60,13 @@ Camera::type_ListOfViolation & Camera::ListOfViolation() { return m_ListOfViolat
 
 const Camera::type_ListOfViolation & Camera::ListOfViolation() const { return m_ListOfViolation; }
 
-void Camera::setCameraId(const long & val) { m_CameraId = val; }
+void Camera::setCameraId(const QUuid & val) { m_CameraId = val; }
 
 void Camera::setName(const QString & val) { m_Name = val; }
 
 void Camera::setLocation(const QString & val) { m_Location = val; }
+
+void Camera::setStreamLocation(const QString & val) { m_StreamLocation = val; }
 
 void Camera::setListOfViolation(const Camera::type_ListOfViolation & val) { m_ListOfViolation = val; }
 

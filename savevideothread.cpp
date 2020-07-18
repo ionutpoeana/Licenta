@@ -1,4 +1,5 @@
 #include "savevideothread.h"
+#include "ocv/constants.h"
 
 #include <direct.h>
 
@@ -19,7 +20,7 @@ SaveVideoThread::~SaveVideoThread()
     wait();
 }
 
-void SaveVideoThread::saveVideo(ViolationProof *violationProof)
+void SaveVideoThread::saveViolationSlot(ViolationProof *violationProof)
 {
     QMutexLocker locker(&m_mutex);
 
@@ -61,7 +62,17 @@ void SaveVideoThread::run()
         if(violationProof !=nullptr)
         {
             int codec = cv::VideoWriter::fourcc('M','J','P', 'G');
-            cv::VideoWriter videoWriter(violationProof->m_videoName,codec,30,violationProof->m_violationVideo.front().size(),true);
+            std::string location;
+            location.append(violationProof->m_saveLocation);
+            location.append("\\");
+            location.append(violationProof->m_camera->getLocation().toStdString());
+            location.append(violationProof->m_camera->getName().toStdString());
+            location.append(std::to_string(violationProof->m_violationNumber));
+
+            std::string videoLocation = location;
+            videoLocation.append(".avi");
+            std::string photoLocation = location.append(".png");
+            cv::VideoWriter videoWriter(videoLocation,codec,FRAME_RATE,violationProof->m_violationVideo.front().size(),true);
 
             cv::Mat proof;
 
@@ -69,40 +80,44 @@ void SaveVideoThread::run()
             {
                 proof = violationProof->m_violationVideo.front().clone();
                 violationProof->m_violationVideo.pop();
+                if( violationProof->m_violationVideo.size()==MIN_VIOLATION_PROOF_FRAMES)
+                {
+                    cv::imwrite(photoLocation,proof);
+                }
                 videoWriter.write(proof);
             }
 
             videoWriter.release();
 
 
-            char buffer[_MAX_FNAME] = {'\0'};
-            if(!_getcwd(buffer,_MAX_FNAME))
+            QDateTime dateTime = QDateTime::currentDateTime();
+
+            Violation* violation = new Violation;
+            violation->setViolationId(QUuid::createUuid());
+            violation->setTime(dateTime);
+            violation->setRuleType((int)violationProof->m_violationType);
+            violation->setPhotoLocation(QString::fromStdString(photoLocation));
+            violation->setVideoLocation(QString::fromStdString(videoLocation));
+            violation->setCamera(violationProof->m_camera);
+
+            m_mutex.lock();
+            QSqlError error = qx::dao::insert(violation,&m_dataBase);
+            m_mutex.unlock();
+
+            if(error.type()!=QSqlError::NoError)
             {
-                qDebug("Eroare la preularea caii fisierului %s!\n",violationProof->m_videoName.c_str());
+                qDebug()<<this->metaObject()->className() << ":\tQSqlError at violation insertion!";
             }
             else
             {
-                QString videoLocation(buffer);
-                videoLocation.append("\\");
-                videoLocation.append(QString::fromUtf8(violationProof->m_videoName.c_str()));
-
-                QString photoLocation(videoLocation);
-                photoLocation.replace(".avi",".png");
-
-                QDateTime dateTime = QDateTime::currentDateTime();
-
-                Violation violation;
-                violation.setTime(dateTime);
-                violation.setRuleType(violationProof->m_violationType);
-                violation.setPhotoLocation(photoLocation);
-                violation.setVideoLocation(videoLocation);
-
-                qx::dao::insert(violation,&m_dataBase);
+                qDebug()<<this->metaObject()->className() << ":\tViolation succesfully saved!"<< "Camera: "<<violationProof->m_camera->getName();
 
                 m_dataBase.commit();
-
-                emit videoSaved(violation);
+                delete violationProof;
+                violationProof = nullptr;
+                emit violationSavedSignal(violation);
             }
+
         }
     }
 }

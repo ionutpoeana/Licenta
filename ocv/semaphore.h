@@ -9,70 +9,85 @@
 class Semaphore : public Rule
 {
 private:
+    // the crosswalk line
+    std::vector<Point> _semaphoreLightDelimiter;
+
     // semaphore bouding rect
-    Rect _boundingRect;
+    Rect _semaphoreBoundingRect;
 
     // semaphore image
-    Mat _image;
+    Mat _semaphoreImage;
+
+    // coordinates of semaphore lights stored in keypoints
+    SemaphoreLightCoordinates _semaphoreLightsCoordinates;
+
+    // last semaphore color, used in intermitent yello case
+    SEMAPHORE_LIGHT _lastSemaphoreLight = SEMAPHORE_LIGHT::GREEN;
+    SEMAPHORE_LIGHT _currentSemaphoreLight = SEMAPHORE_LIGHT::GREEN;
 
     // contur of area in which semaphore light is checked, coordinates in local image
-    std::vector<Point> _areaContour;
+    std::vector<Point> _interestAreaContour;
 
     // bouding rectangle of area  in which semaphore light is checked, coordinates in global image
-    Rect _areaContourBoundingRect;
+    Rect _interestAreaBoundingRect;
 
     // motion matrix used for conected components
-    std::vector<std::vector<long long>> _areaMotionMatrix;
+    std::vector<std::vector<long long>> _interestAreaMotionMatrix;
 
     // current frame components
     std::list<Component> _currentFrameComponents;
 
-    //
-    std::list<Component> _components;
+    // components that are beeing tracked
+    std::list<Component> _trackedComponents;
 
     // area image
-    Mat _areaImage;
+    Mat _interestAreaImage;
 
-    Mat _cvtPrevAreaImage;
+    // gray level copy of previous frame
+    Mat _grayPrevInterestAreaImage;
 
     // the mask created using 3 frame diferencing
-    Mat _areaMask;
+    Mat _interestAreaMask;
 
     // a buffer which holds binary images for 3 frame differencing method
     Mat _areaBuffer[BUFFER_SIZE];
 
-    // the crosswalk line
-    std::vector<Point> _delimiter;
-
+    // index of current frame, used for _areaBuffer update
     long long _frameIndex;
 
+    // checks if a horisontal line is crossed
     bool checkLineCrossing(Point &a, Point &b);
+
+    Scalar* m_colors;
 public:
-    Semaphore():_frameIndex(0){};
+    Semaphore();
 
     // contains logic to create a semaphore from a vector of BUFFER_SIZE+1 frames
-    void setup(VideoCapture capture);
+    void setup(VideoCapture capture)override;
 
     // updates the _image mat constantly
-    void update(Mat frame);
+    void update(Mat frame)override;
 
     // create and set binary area buffer
     // frames contains BUFFER_SIZE + 1 frames
     void setupAreaBuffer(const std::vector<Mat> &frames);
 
-    Mat getAreaMask();
+    Mat getAreaMask()override;
 
-    void drawInfOnFrame(Mat& frame);
+    void drawInfOnFrame(Mat& frame)override;
 
     SEMAPHORE_LIGHT getLight();
 
-    void drawComponentsInfOnFrame(Mat& frame);
+    void drawComponentsInfOnFrame(Mat& frame)override;
 
-    bool checkRuleViolation();
 
-    Mat getMotionMatrix();
+    bool checkRuleViolation()override;
 
-    virtual ~Semaphore() {};
+    Mat getMotionMatrix() override;
+
+    RULE_TYPE getRuleType() override;
+
+    ~Semaphore() {};
 };
 
 

@@ -26,13 +26,14 @@ public:
 
     void addViolationItems(const QList<Violation> violations);
     void addViolationItem(const Violation violation);
-    void setup();
 
     QList<ViolationWidget*> *m_violations;
+
     QVBoxLayout* m_vViolationsLayout;
     QWidget* m_scrollAreaWidget;
     QLabel* m_lblViolationsNumber;
     QScrollArea* m_scrollArea;
+
 
 signals:
 

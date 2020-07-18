@@ -5,44 +5,61 @@
 
 #define SPACE_KEY 32
 #define ESC 27
-#define WAIT_TIME 10
-#define NORMAL_FRAME_TIME 5
 #define REPEAT 114
 
-#define SEMAPHORE_THRESHOLD  150
+#define WAIT_TIME 10
+#define NORMAL_FRAME_TIME 10
+
+#define SEMAPHORE_THRESHOLD  40
+#define BLACK_TOP_HAT_KERNEL_SIZE 5
+#define COLOR_THRESHOLD 50
 
 #define BOX_SIZE 10
-#define MIN_BOX_NUMBER 5
-
-#define MAX_FRAMES_NO_MOVEMENT_TIME 2
+#define MIN_BOX_NUM BER 5
+#define MOTION_SPLIT_FACTOR 2
 
 #define BUFFER_SIZE 3
-#define MOTION_SPLIT_FACTOR 4
 
-#define MAXIMUM_UNDETECTED_NR_FRAMES 3
-
-#define ZOOM_MAX_VALUE 10
+#define MAX_FRAMES_NO_MOVEMENT_TIME 2
+#define MAX_COMPONENT_UNDETECTED_NR_FRAMES 6
+#define MAX_COMPONENT_NOT_VISIBLE_NR_FRAMES 3
+#define MIN_DETECTED_COMPONENT_NR_FRAMES 10
 
 #define STATE_NUM 4
 #define MEASURE_NUM 2
+#define KALMAN_TRAINING_POINTS_NUMBER 8
+#define MAXIMUM_KALMAN_PREDICTION_TIMES 10
+
+
+
+#define DIRECTION_SLOPE_POINTS_NUMBER 20
+
+
+
+#define VIOLATION_PROOF_FRAMES 48
+#define MIN_VIOLATION_PROOF_FRAMES 24
+
+#define VIDEO_RESOLUTION Size(1280,720)
+#define FRAME_RATE 24
+
+
+const float ATAN_15 = 0.267;
+const float ATAN_165 = -0.267;
+
+const float ATAN_30 = 0.577;
+const float ATAN_150 = -0.577;
+
+const float ATAN_45 = 1.5;
+const float ATAN_135 = -1.5;
+
 
 enum class SEMAPHORE_LIGHT {
-    RED,
+    RED= 0,
     GREEN,
     YELLOW,
     UNDEFINED
 };
 
-enum class SEMAPHORE_TYPE {
-    CARS,
-    PEDESTRIANS
-};
-
-enum class OBJECT_ORIENTATION {
-    VERTICAL,
-    HORIZONTAL,
-    UNDEFINED
-};
 
 enum  RULE_TYPE
 {
@@ -55,14 +72,21 @@ enum  RULE_TYPE
 };
 
 
+
+struct SemaphoreLightCoordinates
+{
+    bool hasAllLightsCenters = false;
+    // highest one, smallest y
+    cv::KeyPoint red;
+    //
+    cv::KeyPoint yellow;
+    //
+    cv::KeyPoint green;
+};
+
 const cv::Scalar GREEN = cv::Scalar(0, 255, 0);
 const cv::Scalar BLUE = cv::Scalar(255, 0, 0);
 const cv::Scalar RED = cv::Scalar(0, 0, 255);
 
-const QString connectionString =(
-            "DRIVER={SQL Server Native Client 11.0};"
-            "SERVER=(localdb)\\ProjectsV13;"
-            "DATABASE=LICENTA;"
-            "Trusted_Connection=Yes;"
-       );
+
 

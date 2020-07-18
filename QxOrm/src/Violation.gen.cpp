@@ -1,5 +1,5 @@
 /************************************************************************************************
-** File created by QxEntityEditor 1.2.5 (2020/07/07 22:14) : please, do NOT modify this file ! **
+** File created by QxEntityEditor 1.2.5 (2020/07/15 00:46) : please, do NOT modify this file ! **
 ************************************************************************************************/
 
 #include "../include/Licenta_precompiled_header.gen.h"
@@ -43,13 +43,13 @@ void register_class(QxClass<Violation> & t)
 
 } // namespace qx
 
-Violation::Violation() : m_ViolationId(0), m_RuleType(0) { ; }
+Violation::Violation() : m_RuleType(0) { ; }
 
-Violation::Violation(const long & id) : m_ViolationId(id), m_RuleType(0) { ; }
+Violation::Violation(const QUuid & id) : m_ViolationId(id), m_RuleType(0) { ; }
 
 Violation::~Violation() { ; }
 
-long Violation::getViolationId() const { return m_ViolationId; }
+QUuid Violation::getViolationId() const { return m_ViolationId; }
 
 QDateTime Violation::getTime() const { return m_Time; }
 
@@ -61,7 +61,7 @@ int Violation::getRuleType() const { return m_RuleType; }
 
 Violation::type_Camera Violation::getCamera() const { return m_Camera; }
 
-void Violation::setViolationId(const long & val) { m_ViolationId = val; }
+void Violation::setViolationId(const QUuid & val) { m_ViolationId = val; }
 
 void Violation::setTime(const QDateTime & val) { m_Time = val; }
 

@@ -10,6 +10,8 @@
 
 
 extern int DISTANCE_THRESHOLD;
+extern long long TIME;
+
 class Component
 {
 public:
@@ -19,10 +21,11 @@ public:
     int nrNoDetectionFrames;
     int maxDistance;
     bool matchFound;
+    bool isVisible;
     bool hasPassedLine;
+    long long creationTime;
     cv::Point2f center;
     cv::KalmanFilter kf;
-
 
     std::vector<cv::Point> centerHistory;
     // trebuie sa memorez punctele prin care trece component
@@ -47,19 +50,14 @@ public:
         centerHistory = std::vector<cv::Point>();
         center = cv::Point2f(0, 0);
 
-
         maxDistance = 0;
         matchFound = false;
         hasPassedLine = false;
+        isVisible = false;
         nrPoints = 0;
         nrNoDetectionFrames = 0;
         componentIndex = 0;
-    }
-
-    ~Component()
-    {
-        center.~Point_();
-        kf.~KalmanFilter();
+        creationTime = TIME;
     }
 
     bool operator==(const Component& c) const {

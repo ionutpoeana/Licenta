@@ -31,22 +31,22 @@ private:
     QLineEdit *m_leCameraName;
     QComboBox *m_cbRuleType;
 
+    QSqlDatabase* m_dataBase;
+
     CameraStream* m_cameraStream;
+    Camera* m_camera;
 
     void m_pBtnOpenLocalVideo_clicked();
     void m_pBtnSave_clicked();
     void m_pBtnSetUpRule_clicked();
 
+    QMutex m_mutex;
 public:
-    explicit AddCameraWidget(QWidget *parent = nullptr);
+    explicit AddCameraWidget( QSqlDatabase* dataBase,QWidget *parent = nullptr);
     virtual ~AddCameraWidget();
 
 signals:
-    void cameraSaved(CameraStream* cameraStream);
-
-
-
-
+    void cameraSavedSignal(CameraStream* cameraStream);
 };
 
 #endif // ADDCAMERAWIDGET_H
