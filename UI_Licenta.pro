@@ -1,6 +1,14 @@
-QT       += core gui multimedia multimediawidgets widgets sql
+QT  +=core
+QT  +=gui
+QT  +=multimedia
+QT  +=multimediawidgets
+QT  +=widgets
+QT  +=sql
+QT  +=charts
+QT  +=help
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
 
 CONFIG += c++11
 
@@ -16,6 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    camerastreamwrapper.cpp \
     databasefactory.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -25,15 +34,19 @@ SOURCES += \
     ocv/semaphore.cpp \
     ocv/utils.cpp\
     ocv/violationproof.cpp \
-    processvideothread.cpp \
+    processstreamthread.cpp \
     savevideothread.cpp \
     widgets/addcamerawidget.cpp \
     widgets/cameraviolationdetailswidget.cpp \
+    widgets/toggleswitch.cpp \
+    widgets/videoplayerwidget.cpp \
+    widgets/violationchartwidget.cpp \
     widgets/violationwidget.cpp
 
 
 
 HEADERS += \
+    camerastreamwrapper.h \
     databasefactory.h \
     mainwindow.h \
     ocv/camerastream.h \
@@ -43,11 +56,13 @@ HEADERS += \
     ocv/semaphore.h \
     ocv/utils.h\
     ocv/violationproof.h \
-    processvideothread.h \
+    processstreamthread.h \
     savevideothread.h \
     widgets/addcamerawidget.h \
     widgets/cameraviolationdetailswidget.h \
-    widgets/qtConstants.h \
+    widgets/toggleswitch.h \
+    widgets/videoplayerwidget.h \
+    widgets/violationchartwidget.h \
     widgets/violationwidget.h
 
 FORMS += \

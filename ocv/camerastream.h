@@ -12,18 +12,23 @@
 #include <QWidget>
 
 #include <queue>
+
+namespace cv {
+
+
 class CameraStream :public QObject
 {
     Q_OBJECT
     std::string m_saveLocation;
     bool m_hasCrimeBeenCommitted = false;
     bool m_addFramesAtCrimeProof = false;
+    bool m_displayInterestElemets = false;
     std::queue<cv::Mat> m_proofOfCrime;
     cv::VideoCapture m_videoCapture;
     cv::Mat m_currentFrame;
     cv::Mat m_prevFrame;
     unsigned int m_violationNumber;
-    QTimer* m_readFrameTimer;
+    QTimer* m_readFrameTimer = nullptr;
     bool m_isStreamDisplayed;
 
     void readFrame();
@@ -32,19 +37,22 @@ public:
     QSharedPointer<Camera> m_camera;
 
     CameraStream(std::string saveLocation);
-    ~CameraStream();
-    void startStreamProcessing();
+    virtual ~CameraStream();
+
 
 public slots:
+    void stopStreamProcessingSlot(bool stopOrStartStreamProcessing);
     void displayStreamSlot(QUuid streamId);
+    void displayStreamInterestElements(QUuid streamId, bool areDisplayed);
+    void startStreamProcessingSlot();
 
 signals:
-    void errorSignal(QString error);
-    void finishedStreamProcessingSignal();
+    void errorSignal(QUuid streamId, QString error);
+    void finishedStreamProcessingSignal(QUuid streamId);
 
     void sendCurrentFrameSignal( QImage* image);
     void violationDetectedSignal(ViolationProof * violationProof);
 
 };
-
+}
 #endif // CAMERASTREAM_H

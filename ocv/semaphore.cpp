@@ -3,6 +3,9 @@
 #include <QtDebug>
 
 extern int DISTANCE_THRESHOLD;
+namespace cv {
+
+
 
 bool Semaphore::checkLineCrossing(Point &a, Point &b)
 {
@@ -94,7 +97,12 @@ Semaphore::Semaphore():_frameIndex(0){
     }
 }
 
-void Semaphore::setup( VideoCapture capture)
+bool Semaphore::isRuleSet()
+{
+    return m_isRuleSet;
+}
+
+void Semaphore::setup( VideoCapture &capture)
 {
     if(!capture.isOpened())
     {
@@ -149,7 +157,7 @@ void Semaphore::setup( VideoCapture capture)
     this->setupAreaBuffer(frames);
     this->update(frames[BUFFER_SIZE]);
 
-    capture.~VideoCapture();
+    m_isRuleSet = true;
 }
 
 void Semaphore::update(Mat frame)
@@ -328,6 +336,15 @@ RULE_TYPE Semaphore::getRuleType()
     return RULE_TYPE::SEMAPHORE;
 }
 
+Semaphore::~Semaphore()
+{
+    if(m_colors !=nullptr)
+    {
+        delete m_colors;
+        m_colors = nullptr;
+    }
+}
+
 SEMAPHORE_LIGHT Semaphore::getLight()
 {
 
@@ -386,4 +403,5 @@ SEMAPHORE_LIGHT Semaphore::getLight()
         return SEMAPHORE_LIGHT::RED;
 
     return SEMAPHORE_LIGHT::UNDEFINED;
+}
 }

@@ -12,9 +12,10 @@ public:
 
     virtual ~Rule();
 
-    virtual void setup( cv::VideoCapture capture) = 0;
+    virtual void setup( cv::VideoCapture &capture) = 0;
     virtual void update(cv::Mat frame) = 0;
     virtual bool checkRuleViolation() = 0;
+    virtual bool isRuleSet() = 0;
 
     virtual void drawInfOnFrame(cv::Mat &frame)=0;
     virtual void drawComponentsInfOnFrame(cv::Mat &frame) = 0;

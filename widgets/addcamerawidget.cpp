@@ -38,7 +38,7 @@ AddCameraWidget::AddCameraWidget( QSqlDatabase* database, QWidget *parent) : QWi
     fLayout = new QFormLayout;
     fLayout->addRow("Camera location:",m_leCameraLocation);
     fLayout->addRow("Camera name:",m_leCameraName);
-    fLayout->addRow("Ryle type:",m_cbRuleType);
+    fLayout->addRow("Rule type:",m_cbRuleType);
 
     m_pBtnSetUpRule = new QPushButton;
     m_pBtnSetUpRule ->setObjectName("m_pBtnSetUpRule");
@@ -66,7 +66,7 @@ AddCameraWidget::AddCameraWidget( QSqlDatabase* database, QWidget *parent) : QWi
     connect(m_pBtnSetUpRule,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSetUpRule_clicked);
     connect(m_pBtnSave,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSave_clicked);
 
-    m_cameraStream = new CameraStream("F:\\violations");
+    m_cameraStream = new cv::CameraStream("F:\\violations");
     m_camera = new Camera;
 }
 
@@ -84,16 +84,29 @@ AddCameraWidget::~AddCameraWidget()
     delete fLayout;
     delete gLayout;
     delete gBox;
+
+    /*
+    if(m_camera != nullptr)
+    {
+        delete m_camera;
+        m_camera = nullptr;
+    }
+
+    if(m_cameraStream!=nullptr)
+    {
+        delete m_cameraStream;
+        m_cameraStream = nullptr;
+    }
+    */
 }
 
 void AddCameraWidget::m_pBtnOpenLocalVideo_clicked()
 {
-    QString videoLocation = QFileDialog::getOpenFileName(this,"Open video",QDir::currentPath(),QStringLiteral("Video (*.mp4)"));
+    QString videoLocation = QFileDialog::getOpenFileName(this,"Open video",QDir::currentPath(),QStringLiteral("Video (*.*)"));
     if(videoLocation.size()!=0)
     {
         m_camera->setStreamLocation(videoLocation);
     }
-
 }
 
 void AddCameraWidget::m_pBtnSave_clicked()
@@ -165,7 +178,12 @@ void AddCameraWidget::m_pBtnSave_clicked()
         m_dataBase->commit();
         QSharedPointer<Camera> sharedCamera = QSharedPointer<Camera>(m_camera);
         m_cameraStream->m_camera = sharedCamera;
+
         emit cameraSavedSignal(m_cameraStream);
+
+        m_cameraStream = nullptr;
+        m_camera = nullptr;
+
     }
 }
 
@@ -179,29 +197,48 @@ void AddCameraWidget::m_pBtnSetUpRule_clicked()
         return;
     }
 
-    RULE_TYPE ruleSelection =(RULE_TYPE) m_cbRuleType->currentIndex();
-    Rule* rule = nullptr;
-    switch (ruleSelection)
+    if(m_rule == nullptr)
     {
-    case RULE_TYPE::SEMAPHORE:
-        rule = new Semaphore();
-        break;
-    case RULE_TYPE::FORBIDDEN_FORWARD:
-    case RULE_TYPE::FORBIDDEN_ON_THE_LEFT:
-    case RULE_TYPE::FORBIDDEN_ON_THE_RIGHT:
-    case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_LEFT:
-    case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_RIGHT:
-        QMessageBox msgBox;
-        msgBox.setText("Rule not implemented!");
-        msgBox.exec();
-        break;
+        RULE_TYPE ruleSelection =(RULE_TYPE) m_cbRuleType->currentIndex();
+
+        switch (ruleSelection)
+        {
+        case RULE_TYPE::SEMAPHORE:
+            m_rule = new cv::Semaphore();
+            break;
+        case RULE_TYPE::FORBIDDEN_FORWARD:
+        case RULE_TYPE::FORBIDDEN_ON_THE_LEFT:
+        case RULE_TYPE::FORBIDDEN_ON_THE_RIGHT:
+        case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_LEFT:
+        case RULE_TYPE::FORBIDDEN_FORWARD_OR_ON_THE_RIGHT:
+            QMessageBox msgBox;
+            msgBox.setText("Rule not implemented!");
+            msgBox.exec();
+            break;
+        }
     }
 
-    if(rule!=nullptr)
+    if(m_rule!=nullptr)
     {
-        VideoCapture capture(m_camera->getStreamLocation().toStdString());
-        rule->setup(capture);
-        m_cameraStream->m_trafficRules.push_back(rule);
+        if(!m_rule->isRuleSet())
+        {
+            cv::VideoCapture capture(m_camera->getStreamLocation().toStdString());
+            m_rule->setup(capture);
+        }
+
+        if(m_rule->isRuleSet())
+        {
+
+            m_cameraStream->m_trafficRules.push_back(m_rule);
+            qDebug()<<this->metaObject()->className()<<"\tThe rule has been set succesfully!"<<QString::fromStdString(cv::enumToString(m_rule->getRuleType()));
+            m_rule= nullptr;
+
+        }
+        else
+        {
+            qDebug()<<this->metaObject()->className()<<"\tThe rule set FAILED!"<<QString::fromStdString(cv::enumToString(m_rule->getRuleType()));
+            delete m_rule;
+            m_rule=nullptr;
+        }
     }
-    qDebug()<<this->metaObject()->className()<<"\tThe rule has been set succesfully!"<<QString::fromStdString(enumToString(rule->getRuleType()));
 }

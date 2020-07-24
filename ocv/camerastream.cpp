@@ -4,6 +4,8 @@
 
 #include <QDebug>
 
+namespace cv
+{
 void CameraStream::readFrame()
 {
 
@@ -19,26 +21,22 @@ void CameraStream::readFrame()
     {
         qDebug()<<this->metaObject()->className()<<"\tStop stream processsing! Reached end of stream!";
         m_readFrameTimer->stop();
+        m_videoCapture.~VideoCapture();
+        emit finishedStreamProcessingSignal(m_camera->getCameraId());
         return;
     }
 
     cv::resize(m_currentFrame,m_currentFrame,VIDEO_RESOLUTION);
     //qDebug()<<this->metaObject()->className() << "\t" <<m_currentFrame.rows << m_currentFrame.cols;
-    int key = waitKey(1);
-    if(key==32)
-        m_readFrameTimer->stop();
+
 
     for(const auto &rule : m_trafficRules)
     {
-        rule->drawInfOnFrame(m_prevFrame);
-        rule->drawComponentsInfOnFrame(m_prevFrame);
-
-
-        //namedWindow("mask",WINDOW_NORMAL);
-        //imshow("mask",rule->getAreaMask());
-
-        //namedWindow("motionMat",WINDOW_NORMAL);
-        //imshow("motionMat",rule->getMotionMatrix());
+        if(m_displayInterestElemets)
+        {
+            rule->drawInfOnFrame(m_prevFrame);
+            rule->drawComponentsInfOnFrame(m_prevFrame);
+        }
 
         m_proofOfCrime.push(m_prevFrame.clone());
 
@@ -75,8 +73,6 @@ void CameraStream::readFrame()
                 m_proofOfCrime.pop();
             }
 
-
-
             violationProof->m_saveLocation = m_saveLocation;
             violationProof->m_violationType = rule->getRuleType();
             violationProof->m_camera = m_camera;
@@ -87,40 +83,65 @@ void CameraStream::readFrame()
         {
             m_proofOfCrime.pop();
         }
-
-        //qDebug()<<"CameraStream:\tm_violationProofSize="<<m_proofOfCrime.size();
     }
 
-    if(m_isStreamDisplayed)
-    {
-        cvtColor(m_prevFrame,m_prevFrame, COLOR_BGR2RGB);
 
+    //qDebug("Thread for stream %s %s is running!", m_camera->getLocation().toStdString().c_str(),m_camera->getName().toStdString().c_str());
+
+
+    if(m_isStreamDisplayed && m_videoCapture.isOpened())
+    {
+        //qDebug("Stream %s %s sent frame to MainThread", m_camera->getLocation().toStdString().c_str(),m_camera->getName().toStdString().c_str());
+        cvtColor(m_prevFrame,m_prevFrame, COLOR_BGR2RGB);
         Mat resized;
-        cv::resize(m_prevFrame,resized,Size(1280,720));
+        cv::resize(m_prevFrame,resized,VIDEO_RESOLUTION);
         QImage* image = new QImage(resized.data,resized.cols, resized.rows, QImage::Format::Format_RGB888);
         emit sendCurrentFrameSignal(image);
     }
+
     m_prevFrame = m_currentFrame.clone();
-    //qDebug()<<this->metaObject()->className() << "\t" <<m_prevFrame.rows << m_prevFrame.cols;
 }
 
 CameraStream::CameraStream(std::string saveLocation)
 {
     m_saveLocation = saveLocation;
-    m_readFrameTimer = new QTimer();
-    connect(m_readFrameTimer,&QTimer::timeout,this, &CameraStream::readFrame);
-
 }
 
 CameraStream::~CameraStream()
 {
-    m_readFrameTimer->stop();
+
     if(m_readFrameTimer!=nullptr)
+    {
         delete m_readFrameTimer;
+        m_readFrameTimer = nullptr;
+    }
+
+
+    for(unsigned int i =0; i< m_trafficRules.size(); ++i)
+    {
+
+        delete m_trafficRules[i];
+        m_trafficRules[i] = nullptr;
+    }
 }
 
-void CameraStream::startStreamProcessing()
+void CameraStream::stopStreamProcessingSlot(bool stopOrStartStreamProcessing)
 {
+    if(stopOrStartStreamProcessing)
+    {
+        m_readFrameTimer->stop();
+    }
+    else
+    {
+        m_readFrameTimer->start(NORMAL_FRAME_TIME);
+    }
+}
+
+void CameraStream::startStreamProcessingSlot()
+{
+    m_readFrameTimer = new QTimer();
+    connect(m_readFrameTimer,&QTimer::timeout,this, &CameraStream::readFrame);
+
     m_readFrameTimer->start(NORMAL_FRAME_TIME);
     m_videoCapture.open(m_camera->getStreamLocation().toStdString());
 
@@ -132,7 +153,28 @@ void CameraStream::startStreamProcessing()
 void CameraStream::displayStreamSlot(QUuid streamId)
 {
     if(m_camera->getCameraId() == streamId)
+    {
         m_isStreamDisplayed = true;
+
+        if(m_readFrameTimer!=nullptr && m_readFrameTimer->isActive())
+        {
+            qDebug()<<"Stream is displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName()<< "\tTimer is active";
+        }
+    }
     else
+    {
+        qDebug()<<"Stream is NOT displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
         m_isStreamDisplayed = false;
+    }
+}
+
+void CameraStream::displayStreamInterestElements(QUuid streamId, bool areDisplayed)
+{
+    qDebug()<<"Interest elements are displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
+    if(m_camera->getCameraId() == streamId)
+    {
+        m_displayInterestElemets = areDisplayed;
+        qDebug()<<"Interest elements are displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
+    }
+}
 }

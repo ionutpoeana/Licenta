@@ -6,6 +6,9 @@
 #include "utils.h"
 #include "rule.h"
 
+namespace cv {
+
+
 class Semaphore : public Rule
 {
 private:
@@ -55,6 +58,8 @@ private:
     // index of current frame, used for _areaBuffer update
     long long _frameIndex;
 
+    bool m_isRuleSet = false;
+
     // checks if a horisontal line is crossed
     bool checkLineCrossing(Point &a, Point &b);
 
@@ -62,8 +67,10 @@ private:
 public:
     Semaphore();
 
+    bool isRuleSet() override;
+
     // contains logic to create a semaphore from a vector of BUFFER_SIZE+1 frames
-    void setup(VideoCapture capture)override;
+    void setup(VideoCapture &capture)override;
 
     // updates the _image mat constantly
     void update(Mat frame)override;
@@ -87,7 +94,7 @@ public:
 
     RULE_TYPE getRuleType() override;
 
-    ~Semaphore() {};
+    ~Semaphore();
 };
-
+}
 

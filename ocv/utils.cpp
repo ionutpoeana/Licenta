@@ -7,8 +7,11 @@ extern int DISTANCE_THRESHOLD;
 #include<QtDebug>
 
 using namespace std;
-using namespace cv;
 
+
+
+namespace cv
+{
 
 
 bool isMotionInMat(Mat mat)
@@ -247,7 +250,7 @@ list<Component> getComponents(vector<vector<long long>>& motionMatrix)
         }
     }
 
-    showFrame("Motion mat in get components",motionMat,WINDOW_NORMAL);
+    //showFrame("Motion mat in get components",motionMat,WINDOW_NORMAL);
     // take only the trackedComponents over avg number of fixels
     int avgComponentPixels = 0;
     if (currentFrameComponentonent > 0)
@@ -508,18 +511,19 @@ void getDelimiterMouseCbk(int event, int x, int y, int, void* params)
 
 vector<Point> getSemaphoreDelimiterArea(String frameName, Mat frame)
 {
-    showFrame(frameName, frame, WINDOW_NORMAL);
+
     vector<Point> delimiterLine;
     void* params = (void*)&delimiterLine;
     vector<Point> delimiterLineSet;
 
+
     while (delimiterLine.size() != 4)
     {
+
 
         Mat frameClone = frame.clone();
         fprintf(stdout, "Chose 2 points for semaphore delimiter area!\n");
         showFrame(frameName, frameClone, WINDOW_NORMAL);
-
         setMouseCallback(frameName, getDelimiterMouseCbk, params);
 
         while (waitKey() != SPACE_KEY);
@@ -532,7 +536,7 @@ vector<Point> getSemaphoreDelimiterArea(String frameName, Mat frame)
         }
 
         polylines(frameClone, delimiterLine, true, Scalar(0, 0, 255), 4);
-        showFrame("Apastati SPACE pentru a valida selectia! ESC pentru a selecta din nou!", frameClone, WINDOW_NORMAL);
+        showFrame(frameName, frameClone, WINDOW_NORMAL);
 
         int option = waitKey();
 
@@ -547,6 +551,9 @@ vector<Point> getSemaphoreDelimiterArea(String frameName, Mat frame)
                 }
                 i++;
             }
+
+
+            setMouseCallback(frameName, NULL, NULL);
             destroyWindow(frameName);
             return delimiterLineSet;
 
@@ -584,24 +591,21 @@ vector<Point> getObjectContour(string frameName, Mat frameMat, Rect& rect)
     {
 
         Mat frameClone = frameMat.clone();
-        fprintf(stdout, "Alegeti 4 puncte de incadrare a trecerii de pietoni!\n");
         showFrame(frameName, frameClone, WINDOW_NORMAL);
-
         setMouseCallback(frameName, getContourMouseCbk, params);
+
 
         while (waitKey() != SPACE_KEY);
 
         polylines(frameClone, contour, true, Scalar(0, 0, 255), 4);
         showFrame(frameName, frameClone, WINDOW_NORMAL);
 
-        fprintf(stdout, "Apastati SPACE pentru a valida selectia! ESC pentru a selecta din nou!\n ");
         int option = waitKey();
 
         if (option == SPACE_KEY)
         {
             rect = boundingRect(contour);
 
-            destroyWindow(frameName);
             for (auto& point : contour)
             {
                 point.x -= rect.x;
@@ -609,7 +613,6 @@ vector<Point> getObjectContour(string frameName, Mat frameMat, Rect& rect)
             }
 
             int i = 0;
-
 
             for (Point point : contour)
             {
@@ -619,6 +622,7 @@ vector<Point> getObjectContour(string frameName, Mat frameMat, Rect& rect)
                 }
                 i++;
             }
+            setMouseCallback(frameName, NULL, NULL);
             destroyWindow(frameName);
             return orderContourPoints(contourSet);
 
@@ -630,9 +634,7 @@ vector<Point> getObjectContour(string frameName, Mat frameMat, Rect& rect)
             destroyWindow(frameName);
         }
     }
-
 }
-
 
 Mat cropObject(Mat mat, vector<vector<Point>> contour)
 {
@@ -645,7 +647,6 @@ Mat cropObject(Mat mat, vector<vector<Point>> contour)
 
     return contourMat;
 }
-
 
 
 bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
@@ -761,14 +762,14 @@ std::vector<KeyPoint> getKeypoints(Mat semaphoreMat)
     blobDetector->detect(semaphoreCopy, keypoints);
 
 
-    namedWindow("semaphoreMophologyMat", WINDOW_NORMAL);
-    imshow("semaphoreMophologyMat", semaphoreCopy);
+    //namedWindow("semaphoreMophologyMat", WINDOW_NORMAL);
+    //imshow("semaphoreMophologyMat", semaphoreCopy);
 
     Mat semaphoreCopyKeypoints;
 
     drawKeypoints(semaphoreCopy, keypoints, semaphoreCopyKeypoints, Scalar(0, 0, 255));
-    namedWindow("semaphoreCopyKeypoints", WINDOW_NORMAL);
-    imshow("semaphoreCopyKeypoints", semaphoreCopyKeypoints);
+    //namedWindow("semaphoreCopyKeypoints", WINDOW_NORMAL);
+    //imshow("semaphoreCopyKeypoints", semaphoreCopyKeypoints);
 
     return keypoints;
 }
@@ -790,4 +791,5 @@ const string enumToString(RULE_TYPE ruleType)
     return it==EnumToStringMap.end() ? "Out of range": it->second;
 
 
+}
 }

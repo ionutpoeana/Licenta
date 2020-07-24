@@ -10,7 +10,8 @@
 
 
 using namespace std;
-using namespace cv;
+namespace cv
+{
 
 void showFrame(std::string name,cv::Mat &frame, WindowFlags flag);
 
@@ -61,3 +62,4 @@ std::vector<cv::KeyPoint> getKeypoints(Mat semaphoreMat);
 
 const std::string enumToString(RULE_TYPE ruleType);
 
+}

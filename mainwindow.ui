@@ -57,7 +57,7 @@
      <property name="title">
       <string/>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -73,17 +73,17 @@
        <item row="0" column="1">
         <widget class="QComboBox" name="cbName"/>
        </item>
-       <item row="1" column="0">
-        <widget class="QPushButton" name="pushButton">
-         <property name="text">
-          <string>View violation chart</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="1">
         <widget class="QRadioButton" name="rbViewInterestElements">
          <property name="text">
           <string>View interest elements</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="rvViewCameraGraph">
+         <property name="text">
+          <string>View camera graph</string>
          </property>
         </widget>
        </item>
@@ -118,9 +118,17 @@
     <property name="title">
      <string>Camera</string>
     </property>
+    <widget class="QMenu" name="menuExport_violations">
+     <property name="title">
+      <string>Export violations</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionCurrent_stream"/>
+     <addaction name="actionAll_streams"/>
+    </widget>
     <addaction name="actionAdd_camera"/>
     <addaction name="actionHelp"/>
-    <addaction name="actionExport_violations"/>
+    <addaction name="menuExport_violations"/>
    </widget>
    <addaction name="menuCamera"/>
   </widget>
@@ -134,9 +142,14 @@
     <string>Help</string>
    </property>
   </action>
-  <action name="actionExport_violations">
+  <action name="actionCurrent_stream">
    <property name="text">
-    <string>Export violations</string>
+    <string>Current stream</string>
+   </property>
+  </action>
+  <action name="actionAll_streams">
+   <property name="text">
+    <string>All streams</string>
    </property>
   </action>
  </widget>

@@ -33,8 +33,9 @@ private:
 
     QSqlDatabase* m_dataBase;
 
-    CameraStream* m_cameraStream;
+    cv::CameraStream* m_cameraStream;
     Camera* m_camera;
+    Rule* m_rule = nullptr;
 
     void m_pBtnOpenLocalVideo_clicked();
     void m_pBtnSave_clicked();
@@ -46,7 +47,7 @@ public:
     virtual ~AddCameraWidget();
 
 signals:
-    void cameraSavedSignal(CameraStream* cameraStream);
+    void cameraSavedSignal(cv::CameraStream* cameraStream);
 };
 
 #endif // ADDCAMERAWIDGET_H

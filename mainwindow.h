@@ -5,9 +5,11 @@
 #include "ocv/semaphore.h"
 #include "ocv/violationproof.h"
 
+#include "processstreamthread.h"
 #include "savevideothread.h"
 #include "widgets/cameraviolationdetailswidget.h"
 #include "widgets/addcamerawidget.h"
+#include "widgets/violationchartwidget.h"
 
 #include "databasefactory.h"
 
@@ -19,7 +21,7 @@
 #include <QSqlDatabase>
 #include <QtSql>
 #include <QtDebug>
-
+#include <QtCharts/QBarSeries>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
@@ -36,13 +38,43 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+private:
+    int m_cbNameLastIndex = 0;
+    int m_freeThreads = MAX_THREAD_NUMBER;
+
+    QMap<QUuid,ProcessStreamThread*> m_threads;
+
+    // o initializez cu 3 thread-uri
+    QList<ProcessStreamThread*> m_threadsStorage;
+
+    Ui::MainWindow *ui;
+
+    CameraViolationDetailsWidget* m_violationsDetails;
+    AddCameraWidget* m_addCameraWidget;
+    ViolationChartWidget* m_violationChartWidget = nullptr;
+
+    SaveVideoThread* m_saveVideoThread;
+    QSqlDatabase m_database;
+
+    QList<Camera> m_cameraList;
+    QList<Violation> m_violationsList;
+    QMutex m_mutex;
+
+    void writeXML(const Camera& camera, QString fileName);
+
+
+    const Camera& getCurrentCamera();
+
+    void loadCameraLocations();
+    void loadCameraNames(const QString& location);
+    void loadCameraViolations(const QUuid& cameraId);
+    void assignThread(cv::CameraStream*cameraStream);
+
+    QtCharts::QBarSet* groupByHour();
 
 private slots:
 
-    void receiveCameraStreamSlot(CameraStream *cameraStream);
+    void receiveCameraStreamSlot(cv::CameraStream *cameraStream);
     void receiveViolationSlot(Violation*violation);
     void receiveFrameSlot(QImage* image);
     void receiveStreamErrorSlot(QUuid streamId, QString error);
@@ -51,26 +83,20 @@ private slots:
     void on_actionAddCamera();
     void on_cbNameIndexChanged(int index);
     void on_cbCameraLocationIndexChanged(int index);
+    void on_tgsViewInterestElementsToggled(bool checked);
+    void on_actionExportCurrentStreamViolations();
+    void on_actionExportAllStreamsViolations();
+    void on_ActionHelp();
+    void on_tgsViewCameraGraphToggled(bool checked);
 signals:
     void displayStreamSignal(QUuid steamId);
-private:
-    int m_cbNameLastIndex = 0;
+    void displayStreamInterestItems(QUuid streamId, bool idDisplayed);
+    void stopStreamProcessingSignal(bool stopOrStartStreamProcessing);
 
-    Ui::MainWindow *ui;
 
-    CameraViolationDetailsWidget* m_violationsDetails;
-    AddCameraWidget* m_addCameraWidget;
+public:
+    MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
-    SaveVideoThread* m_saveVideoThread;
-    QSqlDatabase m_database;
-    CameraStream* m_cameraStream = nullptr;
-
-    QList<Camera> m_cameraList;
-    QList<Violation> m_violationsList;
-    QMutex m_mutex;
-
-    void loadCameraLocations();
-    void loadCameraNames(const QString& location);
-    void loadCameraViolations(const QUuid& cameraId);
 };
 #endif // MAINWINDOW_H
