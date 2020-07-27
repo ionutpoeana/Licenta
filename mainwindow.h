@@ -39,7 +39,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 private:
-    int m_cbNameLastIndex = 0;
+    int m_cbNameLastIndex = -1;
+    const int MAX_THREAD_NUMBER = 3;
     int m_freeThreads = MAX_THREAD_NUMBER;
 
     QMap<QUuid,ProcessStreamThread*> m_threads;

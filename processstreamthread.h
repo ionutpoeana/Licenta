@@ -9,17 +9,12 @@ class ProcessStreamThread : public QThread
 {
 private:
     Q_OBJECT
-    QMutex m_mutex;
-    QWaitCondition m_waitCondition;
     bool m_isRunning = false;
     static int m_threadNumber;
     int m_threadId;
 public:
     ProcessStreamThread();
-    void pause();
-    void resume();
     int getThreadId(){return m_threadId;}
-
 
 };
 

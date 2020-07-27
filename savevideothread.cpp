@@ -118,6 +118,7 @@ void SaveVideoThread::run()
                 emit violationSavedSignal(violation);
             }
 
+            msleep(100);
         }
     }
 }

@@ -53,7 +53,6 @@ CameraViolationDetailsWidget::~CameraViolationDetailsWidget()
 
 void CameraViolationDetailsWidget::addViolationItems(const QList<Violation> violations)
 {
-
     for(const auto&violation:violations)
     {
         ViolationWidget* vWidget = new ViolationWidget(violation);
@@ -61,8 +60,6 @@ void CameraViolationDetailsWidget::addViolationItems(const QList<Violation> viol
         m_vViolationsLayout->addWidget(vWidget);
     }
     m_lblViolationsNumber->setText(QString::number(m_violations->size()));
-
-
 }
 
 void CameraViolationDetailsWidget::addViolationItem(const Violation violation)
@@ -77,5 +74,4 @@ void CameraViolationDetailsWidget::addViolationItem(const Violation violation)
     m_violations->push_back(vWidget);
     m_vViolationsLayout->addWidget(vWidget);
     m_lblViolationsNumber->setText(QString::number(m_violations->size()));
-
 }

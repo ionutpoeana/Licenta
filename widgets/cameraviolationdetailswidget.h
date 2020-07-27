@@ -33,8 +33,6 @@ public:
     QWidget* m_scrollAreaWidget;
     QLabel* m_lblViolationsNumber;
     QScrollArea* m_scrollArea;
-
-
 signals:
 
 };

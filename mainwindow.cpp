@@ -51,11 +51,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->tgsViewInterestElements, SIGNAL(statusChanged(bool)),this,SLOT(on_tgsViewInterestElementsToggled(bool)));
     connect(ui->tgsViewCameraGraph, SIGNAL(statusChanged(bool)), this, SLOT(on_tgsViewCameraGraphToggled(bool)));
 
-    for(int i = 0; i<MAX_THREAD_NUMBER; ++i)
-    {
-        m_threadsStorage.push_back(new ProcessStreamThread);
-    }
-
     cv::Mat videoStreamEnded = cv::imread("C:\\Users\\ionut\\Documents\\build-UI_Licenta-Desktop_Qt_5_9_9_MinGW_32bit-Debug\\debug\\video stream ended.PNG");
     cvtColor(videoStreamEnded,videoStreamEnded,cv::COLOR_BGR2RGB);
     cv::resize(videoStreamEnded,videoStreamEnded,VIDEO_RESOLUTION);
@@ -66,29 +61,38 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
 
-
     for(int i =0; i<m_threadsStorage.size(); ++i)
     {
         if(m_threadsStorage[i]!=nullptr)
         {
             m_threadsStorage[i]->terminate();
+            m_threadsStorage[i]->wait();
             delete m_threadsStorage[i];
             m_threadsStorage[i] = nullptr;
         }
     }
 
     if(m_addCameraWidget!=nullptr)
+    {
         delete m_addCameraWidget;
+        m_addCameraWidget = nullptr;
+    }
 
     if(m_saveVideoThread!=nullptr)
+    {
         delete m_saveVideoThread;
+        m_saveVideoThread =nullptr;
+    }
 
     if(m_violationsDetails!=nullptr)
+    {
         delete m_violationsDetails;
+        m_violationsDetails = nullptr;
+    }
 
     if(ui!=nullptr)
-        delete ui;
-    ui= nullptr;
+    {    delete ui;
+        ui= nullptr;}
 }
 
 void MainWindow::receiveCameraStreamSlot(cv::CameraStream *cameraStream)
@@ -99,7 +103,10 @@ void MainWindow::receiveCameraStreamSlot(cv::CameraStream *cameraStream)
         m_addCameraWidget = nullptr;
     }
 
-    emit stopStreamProcessingSignal(false);
+    if(!m_threads.empty())
+    {
+        emit stopStreamProcessingSignal(false);
+    }
 
     Camera camera;
     camera.setName(cameraStream->m_camera->getName());
@@ -118,34 +125,47 @@ void MainWindow::receiveCameraStreamSlot(cv::CameraStream *cameraStream)
     }
     ui->cbCameraLocation->setCurrentText(camera.getLocation());
 
+
+    for(int i = 0; i <MAX_THREAD_NUMBER; ++i)
+    {
+        m_threadsStorage.push_back(new ProcessStreamThread);
+    }
+
     assignThread(cameraStream);
-    m_threads[cameraStream->m_camera->getCameraId()]->start(QThread::Priority::HighPriority);
+    m_threads[cameraStream->m_camera->getCameraId()]->start(QThread::Priority::HighestPriority);
     qDebug("THREAD STARTED: Thred with id %d started for camera %s %s", m_threads[cameraStream->m_camera->getCameraId()]->getThreadId(),cameraStream->m_camera->getLocation().toStdString().c_str(), cameraStream->m_camera->getName().toStdString().c_str());
 
-    ui->tgsViewInterestElements->setDown(false);
+
+    ui->tgsViewInterestElements->setStatus(false);
+    ui->tgsViewCameraGraph->setStatus(false);
+
     emit displayStreamSignal(camera.getCameraId());
 
 }
 
 void MainWindow::receiveViolationSlot(Violation *violation)
 {
-    for(const auto&camera : m_cameraList)
+    /* for(const auto&camera : m_cameraList)
     {
         if(camera.getName() == ui->cbName->currentText()
                 && camera.getLocation() == ui->cbCameraLocation->currentText()
                 && violation->getCamera()->getCameraId() == camera.getCameraId())
-        {
-            m_violationsDetails->addViolationItem(*violation);
+     */
+    Camera camera = getCurrentCamera();
+    if(camera.getCameraId() == violation->getCamera()->getCameraId())
+    {
+        m_violationsDetails->addViolationItem(*violation);
+        m_violationsList.push_front(*violation);
 
-            if(ui->gbCameraViolationsGraph!=nullptr)
-            {
-                QtCharts::QBarSet *set = groupByHour();
-                QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
-                series->append(set);
-                m_violationChartWidget->removeChartSeries(series);
-            }
-            break;
+        if(ui->gbCameraViolationsGraph!=nullptr || ui->tgsViewCameraGraph->status())
+        {
+            QtCharts::QBarSet *set = groupByHour();
+            QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
+            series->append(set);
+            m_violationChartWidget->removeChartSeries(series);
         }
+        //     break;
+        //}
     }
 }
 
@@ -165,9 +185,7 @@ void MainWindow::receiveStreamErrorSlot(QUuid streamId, QString error)
 void MainWindow::receiveFinishedStreamSlot(QUuid streamId)
 {
     ProcessStreamThread* processThread = m_threads.find(streamId).value();
-
     qDebug("THREAD: Thread finished processing: threadId %d\tcameraId %s",processThread->getThreadId(),streamId.toString().toStdString().c_str());
-
     m_threads.remove(streamId);
     processThread->quit();
     ++m_freeThreads;
@@ -208,45 +226,36 @@ void MainWindow::on_actionAddCamera()
 
 void MainWindow::on_cbNameIndexChanged(int index)
 {
-    for(const auto&thread:m_threadsStorage)
-    {
-        if(thread->isRunning())
-        {
-            qDebug("Thread %d is running", thread->getThreadId());
-        }
-    }
 
     if(m_cbNameLastIndex !=index)
     {
-        for(const auto&camera : m_cameraList)
+        Camera camera = getCurrentCamera();
+
+
+        if(m_threads.contains(camera.getCameraId()))
         {
-            if(ui->cbName->itemText(index).remove(' ') == camera.getName().remove(' '))
-            {
-                if(m_threads.contains(camera.getCameraId()))
-                {
-                    emit displayStreamSignal(camera.getCameraId());
-                }
-                else
-                {
-                    emit displayStreamSignal(QUuid::createUuid());
-                    cv::Mat videoStreamEnded = cv::imread("C:\\Users\\ionut\\Documents\\build-UI_Licenta-Desktop_Qt_5_9_9_MinGW_32bit-Debug\\debug\\video stream ended.PNG");
-                    cvtColor(videoStreamEnded,videoStreamEnded,cv::COLOR_BGR2RGB);
-                    cv::resize(videoStreamEnded,videoStreamEnded,VIDEO_RESOLUTION);
-                    QImage image(videoStreamEnded.data,videoStreamEnded.cols, videoStreamEnded.rows, QImage::Format::Format_RGB888);
-                    ui->lblVideo->setPixmap(QPixmap::fromImage(image));
-                }
+            emit displayStreamSignal(camera.getCameraId());
+            emit displayStreamInterestItems(camera.getCameraId(),ui->tgsViewInterestElements->status());
+        }
+        else
+        {
+            emit displayStreamSignal(QUuid::createUuid());
+            cv::Mat videoStreamEnded = cv::imread("C:\\Users\\ionut\\Documents\\build-UI_Licenta-Desktop_Qt_5_9_9_MinGW_32bit-Debug\\debug\\video stream ended.PNG");
+            cvtColor(videoStreamEnded,videoStreamEnded,cv::COLOR_BGR2RGB);
+            cv::resize(videoStreamEnded,videoStreamEnded,VIDEO_RESOLUTION);
+            QImage image(videoStreamEnded.data,videoStreamEnded.cols, videoStreamEnded.rows, QImage::Format::Format_RGB888);
+            ui->lblVideo->setPixmap(QPixmap::fromImage(image));
+        }
 
-                loadCameraViolations(camera.getCameraId());
+        loadCameraViolations(camera.getCameraId());
 
-                if(ui->gbCameraViolationsGraph!=nullptr && ui->tgsViewCameraGraph->isEnabled())
-                {
-                    QtCharts::QBarSet *set = groupByHour();
-                    QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
-                    series->append(set);
-                    m_violationChartWidget->removeChartSeries(series);
-                }
-                break;
-            }
+        if(ui->gbCameraViolationsGraph!=nullptr && ui->tgsViewCameraGraph->isEnabled())
+        {
+            QtCharts::QBarSet *set = groupByHour();
+            QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
+            series->append(set);
+            m_violationChartWidget->removeChartSeries(series);
+
         }
         m_cbNameLastIndex = index;
     }
@@ -254,11 +263,14 @@ void MainWindow::on_cbNameIndexChanged(int index)
 
 void MainWindow::on_cbCameraLocationIndexChanged(int index)
 {
-    loadCameraNames(ui->cbCameraLocation->itemText(index).remove(' '));
+    loadCameraNames(ui->cbCameraLocation->itemText(index));
 }
 
 void MainWindow::on_tgsViewInterestElementsToggled(bool checked)
 {
+    if(m_cameraList.empty())
+        return;
+
     Camera camera = getCurrentCamera();
     if(m_threads.contains(camera.getCameraId()))
     {
@@ -289,7 +301,7 @@ void MainWindow::on_actionExportCurrentStreamViolations()
         {
         case QMessageBox::Yes:
         {
-            QString file = camera.getLocation().remove(' ').append('_').append(camera.getName().remove(' ')).append(".xml");
+            QString file = camera.getLocation().append('_').append(camera.getName()).append(".xml");
             QString fileName = QFileDialog::getSaveFileName(this,"Save violations!",file);
             writeXML(camera,fileName);
             break;
@@ -333,8 +345,8 @@ void MainWindow::on_actionExportAllStreamsViolations()
             qx::dao::fetch_by_query(query,violations,&m_database);
             m_mutex.unlock();
 
-            xmlStream.writeTextElement("name",camera.getName().remove(' '));
-            xmlStream.writeTextElement("location",camera.getLocation().remove(' '));
+            xmlStream.writeTextElement("name",camera.getName());
+            xmlStream.writeTextElement("location",camera.getLocation());
             xmlStream.writeTextElement("violationsNumber",QString(violations.size() + '0'));
             xmlStream.writeStartElement("violations");
 
@@ -366,7 +378,13 @@ void MainWindow::on_actionExportAllStreamsViolations()
 void MainWindow::on_ActionHelp()
 {
 
-    QProcess::execute("hh.exe SurveilanceCamera.chm");
+
+    int code = QProcess::execute("hh.exe SurveilanceCamera.chm");
+
+    if(code == -1)
+    {
+        QProcess::execute("hh.exe C:\\Users\\ionut\\Documents\\build-UI_Licenta-Desktop_Qt_5_9_9_MinGW_32bit-Debug\\debug\\SurveilanceCamera.chm");
+    }
 }
 
 void MainWindow::on_tgsViewCameraGraphToggled(bool checked)
@@ -378,13 +396,20 @@ void MainWindow::on_tgsViewCameraGraphToggled(bool checked)
             QtCharts::QBarSet *set = groupByHour();
             QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
             series->append(set);
-
             ui->gbCameraViolationsGraph= new QGroupBox(ui->gbCameraDetails);
             m_violationChartWidget = new ViolationChartWidget(series, ui->gbCameraViolationsGraph);
             m_violationChartWidget->move(5,5);
             ui->gbCameraViolationsGraph->setFixedSize(330,240);
             ui->gbCameraViolationsGraph->move(5,85);
 
+        }
+        else
+        {
+
+            QtCharts::QBarSet *set = groupByHour();
+            QtCharts::QBarSeries *series = new QtCharts::QBarSeries();
+            series->append(set);
+            m_violationChartWidget->removeChartSeries(series);
         }
 
         ui->gbCameraViolations->move(5,330);
@@ -432,18 +457,20 @@ void MainWindow::assignThread(cv::CameraStream *cameraStream)
             m_threads.insert( worker->cameraStream->m_camera->getCameraId(),thread);
             worker->moveToThread(thread);
 
-            bool isSignalConnected = connect(thread,SIGNAL(started()),cameraStream,SLOT(startStreamProcessingSlot()));
+            // worker thread
+            bool isSignalConnected = connect(thread, SIGNAL(started()),cameraStream,SLOT(startStreamProcessingSlot()));
             isSignalConnected = connect(thread, &QThread::quit, worker, &QObject::deleteLater);
             isSignalConnected = connect(worker->cameraStream, SIGNAL(errorSignal(QUuid,QString)), this, SLOT(receiveStreamErrorSlot(QUuid,QString)));
-            isSignalConnected = connect(worker->cameraStream,SIGNAL(finishedStreamProcessingSignal(QUuid)), this, SLOT(receiveFinishedStreamSlot(QUuid)));
-            isSignalConnected = connect(worker->cameraStream,SIGNAL(sendCurrentFrameSignal(QImage*)), this, SLOT(receiveFrameSlot(QImage*)));
+            isSignalConnected = connect(worker->cameraStream, SIGNAL(finishedStreamProcessingSignal(QUuid)), this, SLOT(receiveFinishedStreamSlot(QUuid)));
+            isSignalConnected = connect(worker->cameraStream, SIGNAL(sendCurrentFrameSignal(QImage*)), this, SLOT(receiveFrameSlot(QImage*)));
 
-            // de adaugat metoda de delete latter
-            // save video thread
+
+            // saveVideo thread
             isSignalConnected = connect(worker->cameraStream, &cv::CameraStream::violationDetectedSignal, m_saveVideoThread, &SaveVideoThread::saveViolationSlot);
 
+            // ui thread
             isSignalConnected = connect(this, SIGNAL(displayStreamInterestItems(QUuid,bool)),worker->cameraStream,SLOT(displayStreamInterestElements(QUuid,bool)));
-            isSignalConnected = connect(this,SIGNAL(displayStreamSignal(QUuid)),worker->cameraStream,SLOT(displayStreamSlot(QUuid)));
+            isSignalConnected = connect(this, SIGNAL(displayStreamSignal(QUuid)),worker->cameraStream,SLOT(displayStreamSlot(QUuid)));
             isSignalConnected = connect(this, SIGNAL(stopStreamProcessingSignal(bool)), worker->cameraStream,SLOT(stopStreamProcessingSlot(bool)));
 
             --m_freeThreads;
@@ -484,7 +511,7 @@ QtCharts::QBarSet *MainWindow::groupByHour()
     QtCharts::QBarSet* set = new QtCharts::QBarSet("Time slot.");
     for(int i = 0; i<6; ++i)
     {
-        qDebug("GroupByHour: hour: %d \t value:%d",i,a[i]);
+        //qDebug("GroupByHour: hour: %d \t value:%d",i,a[i]);
         *set<<a[i];
     }
     return set;
@@ -500,8 +527,8 @@ void MainWindow::writeXML(const Camera &camera, QString fileName)
     xmlStream.setAutoFormatting(true);
     xmlStream.writeStartDocument();
     xmlStream.writeStartElement("camera");
-    xmlStream.writeTextElement("name",camera.getName().remove(' '));
-    xmlStream.writeTextElement("location",camera.getLocation().remove(' '));
+    xmlStream.writeTextElement("name",camera.getName());
+    xmlStream.writeTextElement("location",camera.getLocation());
     xmlStream.writeTextElement("violationsNumber",QString(m_violationsList.size() + '0'));
     xmlStream.writeStartElement("violations");
 
@@ -524,10 +551,11 @@ void MainWindow::writeXML(const Camera &camera, QString fileName)
 
 const Camera &MainWindow::getCurrentCamera()
 {
+
     for(const auto&camera : m_cameraList)
     {
-        if(camera.getLocation().remove(' ') == ui->cbCameraLocation->currentText().remove(' ')
-                && camera.getName().remove(' ') == ui->cbName->currentText().remove(' '))
+        if(camera.getLocation() == ui->cbCameraLocation->currentText()
+                && camera.getName() == ui->cbName->currentText())
         {
             return  camera;
         }
@@ -542,24 +570,22 @@ void MainWindow::loadCameraLocations()
         return;
     }
 
-    Camera * currentCamera = nullptr;
     for(auto&camera: m_cameraList)
     {
-        if(ui->cbCameraLocation->findText(camera.getLocation().remove(' '))==-1)
+        if(ui->cbCameraLocation->findText(camera.getLocation())==-1)
         {
-            ui->cbCameraLocation->addItem(camera.getLocation().remove(' '));
-            ui->cbCameraLocation->setCurrentText(camera.getLocation().remove(' '));
+            ui->cbCameraLocation->addItem(camera.getLocation());
+            ui->cbCameraLocation->setCurrentText(camera.getLocation());
         }
 
-        if(ui->cbCameraLocation->currentText() == camera.getLocation().remove(' '))
-        {
-            currentCamera = &camera;
-        }
-
+        ui->cbName->addItem(camera.getName());
     }
+    ui->cbName->setCurrentText(m_cameraList.first().getName());
 
-    loadCameraNames(currentCamera->getLocation());
-    loadCameraViolations(currentCamera->getCameraId());
+    // rezolvat problema cu camera curenta
+    Camera camera = getCurrentCamera();
+    loadCameraNames(camera.getLocation());
+    loadCameraViolations(camera.getCameraId());
 }
 
 void MainWindow::loadCameraNames(const QString &location)
@@ -572,9 +598,10 @@ void MainWindow::loadCameraNames(const QString &location)
 
     for(const auto&camera : m_cameraList)
     {
-        if(camera.getLocation().remove(' ')==QString(location).remove(' '))
+        if(camera.getLocation()==QString(location))
         {
             ui->cbName->addItem(camera.getName());
         }
     }
+    ui->cbName->setCurrentText(m_cameraList.first().getName());
 }

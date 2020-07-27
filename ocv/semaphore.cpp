@@ -62,7 +62,6 @@ bool Semaphore::checkLineCrossing(Point &a, Point &b)
                             sumDenominator+=pow((comp.centerHistory[i].x - meanX),2);
                         }
 
-                        // we can't compute atan of lines
                         if(sumNominator == 0 || sumDenominator ==0)
                             continue;
 
@@ -76,7 +75,7 @@ bool Semaphore::checkLineCrossing(Point &a, Point &b)
                         qDebug("Semaphore: interestAreaLineSlope = %2.3f Points:\t A{%d %d} B{%d %d}",interestAreaLineSlope,_interestAreaContour[0].x,_interestAreaContour[0].y,_interestAreaContour[1].x,_interestAreaContour[1].y);
                         qDebug("Semaphore: componentIndex =%d \t atan=%2.3f\tinterestAreaLineSlope =%2.3f \tcomponentSlope =%2.3f\n\n",comp.componentIndex, atan,interestAreaLineSlope,componentSlope);
 
-                        if(atan < ATAN_45 && atan >ATAN_135)
+                        if(atan < ATAN_30 && atan >ATAN_150)
                         {
                             // there has been a crime
                             return true;
@@ -199,7 +198,7 @@ void Semaphore::update(Mat frame)
     }
     else
     {
-        matchCurrentFrameComponenets(_currentFrameComponents, _trackedComponents);
+            matchCurrentFrameComponenets(_currentFrameComponents, _trackedComponents);
     }
 
     //qDebug()<<"TIME:\t"<<TIME<<"\t_frameIndex:\t"<<_frameIndex;

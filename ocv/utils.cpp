@@ -27,7 +27,10 @@ bool isMotionInMat(Mat mat)
 void showFrame(std::string name, Mat& frame, WindowFlags flag)
 {
     namedWindow(name, flag);
+    resizeWindow(name,1280,720);
+    moveWindow(name,100,100);
     imshow(name, frame);
+
 }
 
 void processMotionMat(Mat& mat, vector<vector<long long>>& motionMatrix)

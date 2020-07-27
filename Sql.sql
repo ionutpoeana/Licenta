@@ -10,7 +10,7 @@ exec sp_columns t_violation
 
 drop table t_camera
 
-select * from licenta.dbo.t_violation where camera = '{0910a959-9606-42a5-ac5b-f390381df5fb}';
+select * from licenta.dbo.t_violation ;
 select * from licenta.dbo.t_camera;
 
 delete licenta.dbo.t_violation ;

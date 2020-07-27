@@ -23,12 +23,16 @@ class ViolationChartWidget : public QWidget
     QtCharts::QChartView *chartView;
 
 public:
+
     explicit ViolationChartWidget( QtCharts::QBarSeries *series, QWidget *parent = nullptr);
+    ~ViolationChartWidget();
 
     void removeChartSeries(QtCharts::QBarSeries *series);
 
 signals:
 
 };
+
+
 
 #endif // VIOLATIONCHARTWIDGET_H

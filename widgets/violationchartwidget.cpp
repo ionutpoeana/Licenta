@@ -14,6 +14,7 @@ ViolationChartWidget::ViolationChartWidget( QtCharts::QBarSeries *series, QWidge
 
     m_axisX = new QtCharts::QBarCategoryAxis();
     m_axisX->append(categories);
+    m_axisX->setTitleText("Time");
     m_chart->addAxis(m_axisX, Qt::AlignBottom);
     series->attachAxis(m_axisX);
 

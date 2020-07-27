@@ -19,11 +19,12 @@ void CameraStream::readFrame()
 
     if(!m_videoCapture.read(m_currentFrame))
     {
-        qDebug()<<this->metaObject()->className()<<"\tStop stream processsing! Reached end of stream!";
+        qDebug()<<this->metaObject()->className()<<"\tSto   p stream processsing! Reached end of stream!";
         m_readFrameTimer->stop();
-        m_videoCapture.~VideoCapture();
         emit finishedStreamProcessingSignal(m_camera->getCameraId());
+        deleteLater();
         return;
+
     }
 
     cv::resize(m_currentFrame,m_currentFrame,VIDEO_RESOLUTION);
@@ -32,13 +33,15 @@ void CameraStream::readFrame()
 
     for(const auto &rule : m_trafficRules)
     {
+
+        m_proofOfCrime.push(m_prevFrame.clone());
+
         if(m_displayInterestElemets)
         {
             rule->drawInfOnFrame(m_prevFrame);
             rule->drawComponentsInfOnFrame(m_prevFrame);
         }
 
-        m_proofOfCrime.push(m_prevFrame.clone());
 
         rule->update(m_currentFrame.clone());
 
@@ -62,7 +65,7 @@ void CameraStream::readFrame()
 
             for(int i = 0;i<VIOLATION_PROOF_FRAMES/2; ++i)
             {
-                violationProof->m_violationVideo.push(m_proofOfCrime.front());
+                violationProof->m_violationVideo.push(m_proofOfCrime.front().clone());
                 m_proofOfCrime.pop();
             }
 
@@ -165,12 +168,12 @@ void CameraStream::displayStreamSlot(QUuid streamId)
     {
         qDebug()<<"Stream is NOT displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
         m_isStreamDisplayed = false;
+        m_displayInterestElemets = false;
     }
 }
 
 void CameraStream::displayStreamInterestElements(QUuid streamId, bool areDisplayed)
 {
-    qDebug()<<"Interest elements are displayed: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
     if(m_camera->getCameraId() == streamId)
     {
         m_displayInterestElemets = areDisplayed;
