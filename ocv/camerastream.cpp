@@ -12,7 +12,9 @@ void CameraStream::readFrame()
     if(!m_videoCapture.isOpened())
     {
         qDebug()<<this->metaObject()->className()<<"\tVideo capture error! Aborting execution!";
+        emit errorSignal(m_camera->getCameraId(), "Video capture error! Aborting execution!");
         m_readFrameTimer->stop();
+        deleteLater();
         return;
     }
 
@@ -34,7 +36,10 @@ void CameraStream::readFrame()
     for(const auto &rule : m_trafficRules)
     {
 
-        m_proofOfCrime.push(m_prevFrame.clone());
+        Mat frame = m_prevFrame.clone();
+        rule->drawInfOnFrame(frame);
+        rule->drawComponentsInfOnFrame(frame);
+        m_proofOfCrime.push(frame);
 
         if(m_displayInterestElemets)
         {
@@ -82,7 +87,9 @@ void CameraStream::readFrame()
             violationProof->m_violationNumber = m_violationNumber;
             ++m_violationNumber;
             emit violationDetectedSignal(violationProof);
-        }else if(!m_addFramesAtCrimeProof && m_proofOfCrime.size() > MIN_VIOLATION_PROOF_FRAMES)
+
+        }
+        else if(!m_addFramesAtCrimeProof && m_proofOfCrime.size() > MIN_VIOLATION_PROOF_FRAMES)
         {
             m_proofOfCrime.pop();
         }
@@ -119,12 +126,13 @@ CameraStream::~CameraStream()
         m_readFrameTimer = nullptr;
     }
 
-
     for(unsigned int i =0; i< m_trafficRules.size(); ++i)
     {
-
-        delete m_trafficRules[i];
-        m_trafficRules[i] = nullptr;
+        if(m_trafficRules[i]!=nullptr)
+        {
+            delete m_trafficRules[i];
+            m_trafficRules[i] = nullptr;
+        }
     }
 }
 
@@ -132,24 +140,27 @@ void CameraStream::stopStreamProcessingSlot(bool stopOrStartStreamProcessing)
 {
     if(stopOrStartStreamProcessing)
     {
+        qDebug()<<"Stream is stopped: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
         m_readFrameTimer->stop();
     }
     else
     {
-        m_readFrameTimer->start(NORMAL_FRAME_TIME);
+        qDebug()<<"Stream is Started: Camera location: " << m_camera->getLocation() <<" name "<<m_camera->getName();
+        m_readFrameTimer->start(m_frameTime);
     }
 }
 
 void CameraStream::startStreamProcessingSlot()
 {
-    m_readFrameTimer = new QTimer();
-    connect(m_readFrameTimer,&QTimer::timeout,this, &CameraStream::readFrame);
-
-    m_readFrameTimer->start(NORMAL_FRAME_TIME);
     m_videoCapture.open(m_camera->getStreamLocation().toStdString());
 
     m_videoCapture.read(m_prevFrame);
+    m_frameTime = NORMAL_FRAME_TIME;
     cv::resize(m_prevFrame, m_prevFrame, VIDEO_RESOLUTION);
+
+    m_readFrameTimer = new QTimer();
+    connect(m_readFrameTimer,&QTimer::timeout,this, &CameraStream::readFrame);
+    m_readFrameTimer->start(m_frameTime);
 
 }
 

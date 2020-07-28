@@ -22,6 +22,7 @@
 #include <QtSql>
 #include <QtDebug>
 #include <QtCharts/QBarSeries>
+#include <QStackedLayout>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
@@ -43,16 +44,18 @@ private:
     const int MAX_THREAD_NUMBER = 3;
     int m_freeThreads = MAX_THREAD_NUMBER;
 
+    QTimer* m_addCameraTimer;
     QMap<QUuid,ProcessStreamThread*> m_threads;
-
-    // o initializez cu 3 thread-uri
     QList<ProcessStreamThread*> m_threadsStorage;
 
     Ui::MainWindow *ui;
 
     CameraViolationDetailsWidget* m_violationsDetails;
     AddCameraWidget* m_addCameraWidget;
-    ViolationChartWidget* m_violationChartWidget = nullptr;
+
+    ViolationChartWidget* m_cameraChart = nullptr;
+    ViolationChartWidget* m_allCameraChart = nullptr;
+    QComboBox* m_cbChart = nullptr;
 
     SaveVideoThread* m_saveVideoThread;
     QSqlDatabase m_database;
@@ -61,17 +64,15 @@ private:
     QList<Violation> m_violationsList;
     QMutex m_mutex;
 
-    void writeXML(const Camera& camera, QString fileName);
-
-
-    const Camera& getCurrentCamera();
-
     void loadCameraLocations();
     void loadCameraNames(const QString& location);
     void loadCameraViolations(const QUuid& cameraId);
     void assignThread(cv::CameraStream*cameraStream);
-
-    QtCharts::QBarSet* groupByHour();
+    QtCharts::QBarSeries* groupByHour();
+    QtCharts::QBarSeries* groupByCamera();
+    void writeXML(const Camera& camera, QString fileName);
+    void updateChart();
+    Camera getCurrentCamera();
 
 private slots:
 
@@ -80,6 +81,8 @@ private slots:
     void receiveFrameSlot(QImage* image);
     void receiveStreamErrorSlot(QUuid streamId, QString error);
     void receiveFinishedStreamSlot(QUuid streamId);
+
+    void on_addCameraTimeOut();
 
     void on_actionAddCamera();
     void on_cbNameIndexChanged(int index);
@@ -92,7 +95,7 @@ private slots:
 signals:
     void displayStreamSignal(QUuid steamId);
     void displayStreamInterestItems(QUuid streamId, bool idDisplayed);
-    void stopStreamProcessingSignal(bool stopOrStartStreamProcessing);
+    void stopOrStopStreamProcessingSignal(bool stopOrStartStreamProcessing);
 
 
 public:

@@ -32,7 +32,6 @@ bool Semaphore::checkLineCrossing(Point &a, Point &b)
             {
 
                 comp.hasPassedLine = true;
-
                 // go in centerHistory vector to see if the component has come along
                 // at least 1/3 of interest area height
                 int imageHeight = (_interestAreaBoundingRect.height - a.y)/1.5 ;
@@ -62,6 +61,7 @@ bool Semaphore::checkLineCrossing(Point &a, Point &b)
                             sumDenominator+=pow((comp.centerHistory[i].x - meanX),2);
                         }
 
+                        // we can't compute atan of lines
                         if(sumNominator == 0 || sumDenominator ==0)
                             continue;
 
@@ -75,7 +75,7 @@ bool Semaphore::checkLineCrossing(Point &a, Point &b)
                         qDebug("Semaphore: interestAreaLineSlope = %2.3f Points:\t A{%d %d} B{%d %d}",interestAreaLineSlope,_interestAreaContour[0].x,_interestAreaContour[0].y,_interestAreaContour[1].x,_interestAreaContour[1].y);
                         qDebug("Semaphore: componentIndex =%d \t atan=%2.3f\tinterestAreaLineSlope =%2.3f \tcomponentSlope =%2.3f\n\n",comp.componentIndex, atan,interestAreaLineSlope,componentSlope);
 
-                        if(atan < ATAN_30 && atan >ATAN_150)
+                        if(atan < ATAN_45 && atan >ATAN_135)
                         {
                             // there has been a crime
                             return true;
@@ -198,7 +198,7 @@ void Semaphore::update(Mat frame)
     }
     else
     {
-            matchCurrentFrameComponenets(_currentFrameComponents, _trackedComponents);
+        matchCurrentFrameComponenets(_currentFrameComponents, _trackedComponents);
     }
 
     //qDebug()<<"TIME:\t"<<TIME<<"\t_frameIndex:\t"<<_frameIndex;
@@ -298,7 +298,7 @@ void Semaphore::drawComponentsInfOnFrame(Mat& frame)
                 circle(frame, Point(point.x + _interestAreaBoundingRect.x, point.y + _interestAreaBoundingRect.y), 2, m_colors[comp.componentIndex%20], FILLED);
             }
         }
-
+        /*
         else
         {
 
@@ -310,7 +310,7 @@ void Semaphore::drawComponentsInfOnFrame(Mat& frame)
                 circle(frame, Point(point.x + _interestAreaBoundingRect.x, point.y + _interestAreaBoundingRect.y), 2, GREEN, FILLED);
             }
         }
-
+*/
     }
 }
 
@@ -319,6 +319,7 @@ bool Semaphore::checkRuleViolation()
 
     _lastSemaphoreLight = _currentSemaphoreLight;
     _currentSemaphoreLight = getLight();
+
     if(_currentSemaphoreLight==SEMAPHORE_LIGHT::RED)
         return checkLineCrossing(_semaphoreLightDelimiter[0], _semaphoreLightDelimiter[1]);
 
@@ -348,59 +349,74 @@ SEMAPHORE_LIGHT Semaphore::getLight()
 {
 
 
-    if (!_semaphoreLightsCoordinates.hasAllLightsCenters)
+
+    std::vector<cv::KeyPoint> lightKeypoints = getKeypoints(_semaphoreImage);
+
+    for (const auto& circle : lightKeypoints)
     {
-        std::vector<cv::KeyPoint> lightKeypoints = getKeypoints(_semaphoreImage);
-
-        for (const auto& circle : lightKeypoints)
+        if (circle.pt.x > _semaphoreImage.cols * 0.33 && circle.pt.x < _semaphoreImage.cols * 0.66)
         {
-            if (circle.pt.x > _semaphoreImage.cols * 0.33 && circle.pt.x < _semaphoreImage.cols * 0.66)
+            if (circle.pt.y < _semaphoreImage.rows * 0.33)
             {
-                if (circle.pt.y < _semaphoreImage.rows * 0.33 && _semaphoreLightsCoordinates.red.size == 0)
-                {
-                    _semaphoreLightsCoordinates.red = circle;
-                }
+                return  SEMAPHORE_LIGHT::RED;
+            }
 
-                if (circle.pt.y > _semaphoreImage.rows * 0.33 && circle.pt.y < _semaphoreImage.rows * 0.66 && _semaphoreLightsCoordinates.yellow.size == 0)
-                {
-                    _semaphoreLightsCoordinates.yellow = circle;
-                }
+            if (circle.pt.y > _semaphoreImage.rows * 0.66)
+            {
+                return  SEMAPHORE_LIGHT::GREEN;
+            }
 
-                if (circle.pt.y > _semaphoreImage.rows * 0.66 && _semaphoreLightsCoordinates.green.size == 0)
-                {
-                    _semaphoreLightsCoordinates.green = circle;
-                }
+            if ( (circle.pt.y > _semaphoreImage.rows * 0.33 && circle.pt.y < _semaphoreImage.rows * 0.66 ) || _semaphoreLightsCoordinates.yellow.size > 0 )
+            {
+                return  SEMAPHORE_LIGHT::YELLOW;
             }
         }
-
-        if (_semaphoreLightsCoordinates.red.size > 0 && _semaphoreLightsCoordinates.green.size > 0 && _semaphoreLightsCoordinates.yellow.size > 0 )
-        {
-            _semaphoreLightsCoordinates.hasAllLightsCenters = true;
-        }
-
     }
 
-    if (_semaphoreLightsCoordinates.red.size > 0 && isCircleLightOn(_semaphoreImage, _semaphoreLightsCoordinates.red, SEMAPHORE_LIGHT::RED))
+    return  _lastSemaphoreLight;
+
     {
-        return SEMAPHORE_LIGHT::RED;
+        /*
+
+    int red = 0;
+    int green = 0;
+    int yellow = 0;
+
+    if (_semaphoreLightsCoordinates.red.size > 0)
+    {
+        red = nrLightedPixels(_semaphoreImage,_semaphoreLightsCoordinates.red,SEMAPHORE_LIGHT::RED);
     }
 
-    if (_semaphoreLightsCoordinates.green.size > 0 && isCircleLightOn(_semaphoreImage, _semaphoreLightsCoordinates.green, SEMAPHORE_LIGHT::GREEN))
+    if (_semaphoreLightsCoordinates.green.size > 0)
     {
-        return SEMAPHORE_LIGHT::GREEN;
+        green = nrLightedPixels(_semaphoreImage, _semaphoreLightsCoordinates.green, SEMAPHORE_LIGHT::GREEN);
     }
 
     if (_semaphoreLightsCoordinates.yellow.size > 0)
     {
-        return SEMAPHORE_LIGHT::YELLOW;
+        yellow = nrLightedPixels(_semaphoreImage, _semaphoreLightsCoordinates.yellow, SEMAPHORE_LIGHT::YELLOW);
     }
 
     // gets here when semaphore changes colors
     // there are a few frames in which all the semaphore colors
     // are turned off
+
+    if(red > green && red > yellow)
+        return SEMAPHORE_LIGHT::RED;
+
+    if(green > yellow && green > red)
+        return SEMAPHORE_LIGHT::GREEN;
+
+    if(yellow > green && yellow>red)
+        return SEMAPHORE_LIGHT::YELLOW;
+
+
+
     if (_lastSemaphoreLight == SEMAPHORE_LIGHT::RED)
         return SEMAPHORE_LIGHT::RED;
 
     return SEMAPHORE_LIGHT::UNDEFINED;
+    */
+    }
 }
 }

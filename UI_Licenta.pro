@@ -38,7 +38,6 @@ SOURCES += \
     savevideothread.cpp \
     widgets/addcamerawidget.cpp \
     widgets/cameraviolationdetailswidget.cpp \
-    widgets/chartwidget.cpp \
     widgets/toggleswitch.cpp \
     widgets/videoplayerwidget.cpp \
     widgets/violationchartwidget.cpp \
@@ -61,7 +60,6 @@ HEADERS += \
     savevideothread.h \
     widgets/addcamerawidget.h \
     widgets/cameraviolationdetailswidget.h \
-    widgets/chartwidget.h \
     widgets/toggleswitch.h \
     widgets/videoplayerwidget.h \
     widgets/violationchartwidget.h \

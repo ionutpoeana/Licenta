@@ -24,10 +24,11 @@ class ViolationChartWidget : public QWidget
 
 public:
 
-    explicit ViolationChartWidget( QtCharts::QBarSeries *series, QWidget *parent = nullptr);
-    ~ViolationChartWidget();
+    explicit ViolationChartWidget( QtCharts::QBarSeries *series, QStringList categories, QString xTitle, QString yTitle, QWidget *parent = nullptr);
+    virtual ~ViolationChartWidget();
 
     void removeChartSeries(QtCharts::QBarSeries *series);
+    void removeChartSeries(QtCharts::QBarSeries *series, QStringList categories);
 
 signals:
 

@@ -27,7 +27,7 @@ CameraViolationDetailsWidget::CameraViolationDetailsWidget(QWidget *parent) : QW
     m_scrollArea->setWidget(m_scrollAreaWidget);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    m_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     m_lblViolationsNumber->setObjectName("m_lblViolationsNumber");
 
@@ -66,12 +66,8 @@ void CameraViolationDetailsWidget::addViolationItem(const Violation violation)
 {
 
     ViolationWidget* vWidget = new ViolationWidget(violation);
-    if(!m_violations->isEmpty())
-    {
-        m_violations->clear();
-    }
-
     m_violations->push_back(vWidget);
     m_vViolationsLayout->addWidget(vWidget);
     m_lblViolationsNumber->setText(QString::number(m_violations->size()));
+
 }

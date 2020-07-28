@@ -8,5 +8,9 @@ CameraStreamWrapper::CameraStreamWrapper(QObject *parent) :
 
 CameraStreamWrapper::~CameraStreamWrapper()
 {
-    delete cameraStream;
+    if(cameraStream!=nullptr)
+    {
+        delete cameraStream;
+        cameraStream = nullptr;
+    }
 }

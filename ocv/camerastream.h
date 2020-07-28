@@ -23,13 +23,16 @@ class CameraStream :public QObject
     bool m_hasCrimeBeenCommitted = false;
     bool m_addFramesAtCrimeProof = false;
     bool m_displayInterestElemets = false;
+    bool m_isStreamDisplayed;
+
     std::queue<cv::Mat> m_proofOfCrime;
     cv::VideoCapture m_videoCapture;
     cv::Mat m_currentFrame;
     cv::Mat m_prevFrame;
     unsigned int m_violationNumber;
+    unsigned int m_frameTime;
     QTimer* m_readFrameTimer = nullptr;
-    bool m_isStreamDisplayed;
+
 
     void readFrame();
 public:

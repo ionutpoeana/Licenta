@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include <QMessageBox>
+#include <QInputDialog>
 
 // creaza un camera stream
 // loacatie
@@ -12,6 +13,9 @@
 
 AddCameraWidget::AddCameraWidget( QSqlDatabase* database, QWidget *parent) : QWidget(parent)
 {
+
+    setAttribute(Qt::WA_DeleteOnClose, true);
+
     m_dataBase = database;
 
     m_pBtnOpenLocalVideo = new QPushButton;
@@ -65,6 +69,7 @@ AddCameraWidget::AddCameraWidget( QSqlDatabase* database, QWidget *parent) : QWi
     connect(m_pBtnOpenLocalVideo,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnOpenLocalVideo_clicked);
     connect(m_pBtnSetUpRule,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSetUpRule_clicked);
     connect(m_pBtnSave,&QPushButton::clicked,this,&AddCameraWidget::m_pBtnSave_clicked);
+    connect(m_pBtnOpenRTSPStream,&QPushButton::clicked, this, &AddCameraWidget::m_pBtnOpenRTSPStream_clicked);
 
     m_cameraStream = new cv::CameraStream("F:\\violations");
     m_camera = new Camera;
@@ -85,24 +90,11 @@ AddCameraWidget::~AddCameraWidget()
     delete gLayout;
     delete gBox;
 
-    /*
-    if(m_camera != nullptr)
-    {
-        delete m_camera;
-        m_camera = nullptr;
-    }
-
-    if(m_cameraStream!=nullptr)
-    {
-        delete m_cameraStream;
-        m_cameraStream = nullptr;
-    }
-    */
 }
 
 void AddCameraWidget::m_pBtnOpenLocalVideo_clicked()
 {
-    QString videoLocation = QFileDialog::getOpenFileName(this,"Open video",QDir::currentPath(),QStringLiteral("Video (*.*)"));
+    QString videoLocation = QFileDialog::getOpenFileName(this,"Open video",QDir::currentPath(),QStringLiteral("Video (*.mp4 | *.avi)"));
     if(videoLocation.size()!=0)
     {
         m_camera->setStreamLocation(videoLocation);
@@ -119,18 +111,18 @@ void AddCameraWidget::m_pBtnSave_clicked()
         return;
     }
 
-    if(m_leCameraLocation->text().isEmpty())
+    if(m_leCameraLocation->text().size()<3)
     {
         QMessageBox msgBox;
-        msgBox.setText("Please provide a camera location!");
+        msgBox.setText("Please provide a valid camera location!");
         msgBox.exec();
         return;
     }
 
-    if(m_leCameraName->text().isEmpty())
+    if(m_leCameraName->text().size()<3)
     {
         QMessageBox msgBox;
-        msgBox.setText("Please provide a camera name!");
+        msgBox.setText("Please provide a valid camera name!");
         msgBox.exec();
         return;
     }
@@ -239,6 +231,36 @@ void AddCameraWidget::m_pBtnSetUpRule_clicked()
             qDebug()<<this->metaObject()->className()<<"\tThe rule set FAILED!"<<QString::fromStdString(cv::enumToString(m_rule->getRuleType()));
             delete m_rule;
             m_rule=nullptr;
+        }
+    }
+}
+
+void AddCameraWidget::m_pBtnOpenRTSPStream_clicked()
+{
+
+    QString rtspPath = QInputDialog::getText(this,"RTSP Stream location","RTSP Stream location",QLineEdit::Normal);
+    if(!rtspPath.isEmpty())
+    {
+        try {
+            cv::VideoCapture capture(rtspPath.toStdString());
+            if(!capture.isOpened())
+            {
+                QMessageBox msb;
+                msb.setText("Please introduce a valid RTSP stream location!");
+                msb.exec();
+            }
+            else
+            {
+                capture.release();
+                m_camera->setStreamLocation(rtspPath);
+            }
+        } catch (const std::exception &ex) {
+
+            qDebug()<<this->metaObject()->className()<<"\tException: "<<ex.what();
+        }
+        catch (...)
+        {
+
         }
     }
 }

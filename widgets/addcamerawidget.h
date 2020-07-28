@@ -40,6 +40,7 @@ private:
     void m_pBtnOpenLocalVideo_clicked();
     void m_pBtnSave_clicked();
     void m_pBtnSetUpRule_clicked();
+    void m_pBtnOpenRTSPStream_clicked();
 
     QMutex m_mutex;
 public:

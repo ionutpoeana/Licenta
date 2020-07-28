@@ -14,8 +14,7 @@ VideoPlayerWidget::VideoPlayerWidget(QWidget *parent)
     m_playButton->setEnabled(false);
     m_playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
 
-    connect(m_playButton, &QAbstractButton::clicked,
-            this, &VideoPlayerWidget::play);
+    connect(m_playButton, &QAbstractButton::clicked, this, &VideoPlayerWidget::play);
 
     m_positionSlider = new QSlider(Qt::Horizontal);
     m_positionSlider->setRange(0, 0);

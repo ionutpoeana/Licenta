@@ -54,7 +54,7 @@ void matchCurrentFrameComponenets(std::list<Component>& currentFrameComponents, 
 vector<Point>getSemaphoreDelimiterArea(String frameName,cv::Mat frame);
 
 // checks if a specific light is on in a specific circle
-bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light);
+int nrLightedPixels(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light);
 
 // gets the keypoints of blobs detected
 // the blobs are filtered by circularity, position, radius

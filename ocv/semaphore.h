@@ -94,7 +94,7 @@ public:
 
     RULE_TYPE getRuleType() override;
 
-    ~Semaphore();
+    virtual ~Semaphore();
 };
 }
 

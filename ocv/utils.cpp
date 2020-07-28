@@ -652,7 +652,7 @@ Mat cropObject(Mat mat, vector<vector<Point>> contour)
 }
 
 
-bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
+int nrLightedPixels(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
 {
     int startRow = circle.pt.y - circle.size / 2;
     int stopRow = circle.pt.y + circle.size / 2;
@@ -662,13 +662,13 @@ bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
 
     Vec3b* ptr = nullptr;
 
-    int nrGreenPixels = 0;
-    int nrRedPixels = 0;
+
 
     switch (light)
     {
     case SEMAPHORE_LIGHT::RED:
-
+    {
+        int nrRedPixels = 0;
         for (int i = startRow; i <= stopRow; ++i)
         {
             ptr = semaphoreMat.ptr<Vec3b>(i);
@@ -680,12 +680,11 @@ bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
                 }
             }
         }
-        if (nrRedPixels > (int(circle.size * circle.size) >> 1))
-            return true;
-        return false;
-        break;
+        return nrRedPixels;
+    }
     case SEMAPHORE_LIGHT::GREEN:
-
+    {
+        int nrGreenPixels = 0;
         for (int i = startRow; i <= stopRow; ++i)
         {
             ptr = semaphoreMat.ptr<Vec3b>(i);
@@ -697,56 +696,57 @@ bool isCircleLightOn(Mat semaphoreMat, KeyPoint circle, SEMAPHORE_LIGHT light)
                 }
             }
         }
-        if (nrGreenPixels > (int(circle.size * circle.size) >> 1))
-            return true;
-        return false;
-        break;
+        return nrGreenPixels;
+    }
     case SEMAPHORE_LIGHT::YELLOW:
+    { int nrYelloPixels = 0;
         for (int i = startRow; i <= stopRow; ++i)
         {
             ptr = semaphoreMat.ptr<Vec3b>(i);
             for (int j = startColl; j < stopColl; ++j)
             {
-                if (ptr[j][1] > COLOR_THRESHOLD)
+                if (ptr[j][1] > COLOR_THRESHOLD && ptr[j][2] > COLOR_THRESHOLD  )
                 {
-                    ++nrGreenPixels;
-                }
-
-                if (ptr[j][2] > COLOR_THRESHOLD)
-                {
-                    ++nrRedPixels;
+                    ++nrYelloPixels;
                 }
 
             }
         }
-        if (nrGreenPixels + nrGreenPixels > (int(circle.size * circle.size) >> 1))
-            return true;
-        return false;
-        break;
-    default:
-        break;
+        return nrYelloPixels;
+    }
+    case SEMAPHORE_LIGHT::UNDEFINED:
+        return 1000;
     }
 }
 
 std::vector<KeyPoint> getKeypoints(Mat semaphoreMat)
 {
     Mat semaphoreCopy;
-    Mat kernel = getStructuringElement(MORPH_RECT, Size(semaphoreMat.size() / BLACK_TOP_HAT_KERNEL_SIZE));
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(semaphoreMat.size() / TOP_HAT_KERNEL_SIZE));
 
     cvtColor(semaphoreMat, semaphoreCopy, COLOR_BGR2GRAY);
 
+    //namedWindow("cvy", WINDOW_NORMAL);
+    //imshow("cvy", semaphoreCopy);
+
+
     morphologyEx(semaphoreCopy, semaphoreCopy, MORPH_TOPHAT, kernel);
 
-    threshold(semaphoreCopy, semaphoreCopy, SEMAPHORE_THRESHOLD, 255, THRESH_BINARY_INV);
+    //namedWindow("black", WINDOW_NORMAL);
+    //imshow("black", semaphoreCopy);
+    erode(semaphoreCopy,semaphoreCopy,getStructuringElement(MORPH_ELLIPSE,Size(3,3)));
+    dilate(semaphoreCopy,semaphoreCopy,getStructuringElement(MORPH_ELLIPSE,Size(2,2)));
+
+    threshold(semaphoreCopy, semaphoreCopy,SEMAPHORE_THRESHOLD , 255, THRESH_BINARY_INV);
+
 
     SimpleBlobDetector::Params params;
-
 
     params.filterByColor = true;
     params.blobColor = 0;
 
     params.filterByCircularity = true;
-    params.minCircularity = 0.25;
+    params.minCircularity = 0.5;
 
     params.filterByConvexity = true;
     params.minConvexity = 0.5;
@@ -765,15 +765,13 @@ std::vector<KeyPoint> getKeypoints(Mat semaphoreMat)
     blobDetector->detect(semaphoreCopy, keypoints);
 
 
-    //namedWindow("semaphoreMophologyMat", WINDOW_NORMAL);
-    //imshow("semaphoreMophologyMat", semaphoreCopy);
-
-    Mat semaphoreCopyKeypoints;
+    /*Mat semaphoreCopyKeypoints;
 
     drawKeypoints(semaphoreCopy, keypoints, semaphoreCopyKeypoints, Scalar(0, 0, 255));
-    //namedWindow("semaphoreCopyKeypoints", WINDOW_NORMAL);
-    //imshow("semaphoreCopyKeypoints", semaphoreCopyKeypoints);
-
+    namedWindow("semaphoreCopyKeypoints", WINDOW_NORMAL);
+    imshow("semaphoreCopyKeypoints", semaphoreCopyKeypoints);
+    waitKey(1);
+    */
     return keypoints;
 }
 
@@ -791,8 +789,7 @@ const string enumToString(RULE_TYPE ruleType)
     };
 
     auto it = EnumToStringMap.find(ruleType);
-    return it==EnumToStringMap.end() ? "Out of range": it->second;
-
+    return it==EnumToStringMap.end() ? "Out of range" : it->second;
 
 }
 }
